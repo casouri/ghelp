@@ -33,7 +33,16 @@
       (require 'ghelp-helpful)
       (ghelp-register-backend 'emacs-lisp-mode
                               (lambda () obarray)
-                              #'ghelp-helpful-describe-symbol))))
+                              #'ghelp-helpful-describe-symbol
+                              ;; this doesn’t matter since faces are
+                              ;; in obarray
+                              nil
+                              #'ghelp-face-describe-symbol))
+    (when (featurep 'eglot)
+      (require 'ghelp-eglot)
+      (ghelp-register-backend 'python-mode
+                              nil
+                              #'ghelp-eglot--describe-symbol))))
 
 (define-minor-mode ghelp-page-minor-mode
   ""
