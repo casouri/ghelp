@@ -92,7 +92,11 @@ If MODE doesn’t point to anything, return itself."
 Select PAGE if ‘help-window-select’ is non-nil.
 If NO-PROMPT non-nil, no prompt."
   (interactive)
-  (let* ((mode (ghelp--resolve-mode major-mode))
+  (let* ((mode (if ghelp-page-minor-mode
+                   ghelp-page--mode
+                 (ghelp--resolve-mode major-mode)))
+         (window (when ghelp-page-minor-mode
+                   (selected-window)))
          (backend/s (ghelp--get-backend mode))
          (backends (if (ghelp-sync-backend-p backend/s) (list backend/s)
                      backend/s))
@@ -114,7 +118,7 @@ If NO-PROMPT non-nil, no prompt."
                              backends))
          page)
     (unless symbol (user-error "No symbol at point"))
-    (ghelp--show-page symbol mode point page entry-list)))
+    (ghelp--show-page symbol mode point page entry-list window)))
 
 (defun ghelp-refresh ()
   "Refresh current page."
@@ -133,11 +137,12 @@ If NO-PROMPT non-nil, no prompt."
                                  (ghelp-backend--describe-symbol
                                   backend symbol point))
                                backends)))
-      (ghelp--show-page symbol mode point page entry-list))))
+      (ghelp--show-page symbol mode point page entry-list (selected-window)))))
 
-(defun ghelp--show-page (symbol mode point page entry-list)
+(defun ghelp--show-page (symbol mode point page entry-list &optional window)
   "Show PAGE w/ SYMBOL at POINT for MODE by displaying ENTRY-LIST.
-Select PAGE if ‘help-window-select’ is non-nil."
+Select PAGE if ‘help-window-select’ is non-nil.
+If non-nil, use WINDOW to display PAGE."
   (if (not entry-list)
       (message "No documentation for %s" symbol)
     (setq page (ghelp--get-page-or-create mode symbol))
@@ -150,9 +155,11 @@ Select PAGE if ‘help-window-select’ is non-nil."
       (goto-char (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold))
-    (let ((win (display-buffer page)))
-      (when help-window-select
-        (select-window win)))))
+    (if window
+        (window--display-buffer page window 'window)
+      (setq window (display-buffer page)))
+    (when help-window-select
+      (select-window window))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
