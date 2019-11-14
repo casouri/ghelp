@@ -12,6 +12,7 @@
 
 (require 'cl-lib)
 (require 'pcase)
+(require 'seq)
 
 (defvar ghelp-page-minor-mode-map
   (let ((map (make-sparse-keymap)))
@@ -95,7 +96,7 @@ If NO-PROMPT non-nil, no prompt."
          (backend/s (ghelp--get-backend mode))
          (backends (if (ghelp-sync-backend-p backend/s) (list backend/s)
                      backend/s))
-         (symbol-list (mapcan #'ghelp-backend--symbol-list backends))
+         (symbol-list (seq-mapcat #'ghelp-backend--symbol-list backends))
          (default-symbol (symbol-name (symbol-at-point)))
          ;; insert default symbol if exists
          (prompt (format "Describe%s: "
