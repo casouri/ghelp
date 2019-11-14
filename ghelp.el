@@ -397,7 +397,7 @@ Each entry is a ‘ghelp-entry’.")
 ;;;;; Variables
 
 (defface ghelp-entry (let ((display t)
-                           (atts '(:inherit hl-line)))
+                           (atts '(:inherit default)))
                        `((,display . ,atts)))
   "Face for each entry in a documentation."
   :group 'ghelp)
