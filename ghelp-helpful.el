@@ -13,9 +13,12 @@
 (require 'helpful)
 
 ;;; New code
+;;
+;; The BUFFER that is passed around to ‘ghelp-helpful--buffer’
+;; could be nil
 
-(defun ghelp-helpful-describe-symbol (symbol point)
-  (let* ((buffer (marker-buffer point))
+(defun ghelp-helpful-describe-symbol (symbol buffer point)
+  (let* ((buffer (or buffer (and point (marker-buffer point))))
          (symbol (intern-soft symbol))
          (callable-doc (ghelp-helpful-callable symbol buffer))
          (variable-doc (ghelp-helpful-variable symbol buffer)))
@@ -52,8 +55,6 @@
           (kill-buffer buf))))))
 
 ;;; Modified helpful.el code
-
-
 
 (defun ghelp-helpful--buffer (symbol callable-p buffer)
   ;; I added the BUFFER parameter - Yuan

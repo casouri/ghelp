@@ -579,6 +579,7 @@ If FOLD non-nil, fold the entry after insertion."
                :text (cadr entry)))
             (funcall fn
                      (if (symbolp symbol) (symbol-name symbol) symbol)
+                     (marker-buffer point)
                      point))))
 
 (defun ghelp-register-backend (mode symbol-list describe-fn)
@@ -598,17 +599,22 @@ Synchronise backends should implement following methods:
  - symbol-list :: (lambda () ...)
     Return the symbol list for that backend.
 
- - describe-symbol :: (lambda (symbol point) ...)
+ - describe-symbol :: (lambda (symbol buffer point) ...)
     Describe SYMBOL.
 
-    BACKEND should return a list of “entries”. Each entry looks
+    Backend should return a list of “entries”. Each entry looks
     like (name text), where NAME is the title of the entry,
-    usually the symbol, and TEXT is the documentation body. TEXT
-    should end with newline and NAME shouldn’t (unless you want
-    extra newline between the title and the body text).
+    usually the symbol itself, and TEXT is the documentation
+    body. TEXT should end with newline and NAME shouldn’t (unless
+    you want extra newline between the title and the body text).
 
     POINT is a marker marking the position of point when user
-    called for documentation."
+    called for documentation.
+
+    BUFFER is the buffer where the point is in.
+
+    BUFFER and POINT are NOT garanteed to be non-nil. That is,
+    they may not be avaliable for the backend."
   (symbol-list nil)
   (describe-symbol nil))
 
@@ -618,7 +624,7 @@ Synchronise backends should implement following methods:
   ""
   '("woome" "veemo" "love" "and" "peace" "many"))
 
-(defun ghelp-dummy-describe-symbol (symbol _)
+(defun ghelp-dummy-describe-symbol (symbol _ _)
   ""
   (pcase symbol
     ("woome" '(("Woome" "Woome!\n")))
