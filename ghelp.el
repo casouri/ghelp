@@ -88,6 +88,7 @@ If MODE doesn’t point to anything, return itself."
 
 (defun ghelp-describe-symbol (&optional no-prompt)
   "Describe symbol.
+Select PAGE if ‘help-window-select’ is non-nil.
 If NO-PROMPT non-nil, no prompt."
   (interactive)
   (let* ((mode (ghelp--resolve-mode major-mode))
@@ -134,7 +135,8 @@ If NO-PROMPT non-nil, no prompt."
       (ghelp--show-page symbol mode point page entry-list))))
 
 (defun ghelp--show-page (symbol mode point page entry-list)
-  "Show PAGE w/ SYMBOL at POINT for MODE by displaying ENTRY-LIST."
+  "Show PAGE w/ SYMBOL at POINT for MODE by displaying ENTRY-LIST.
+Select PAGE if ‘help-window-select’ is non-nil."
   (if (not entry-list)
       (message "No documentation for %s" symbol)
     (setq page (ghelp--get-page-or-create mode symbol))
@@ -147,7 +149,9 @@ If NO-PROMPT non-nil, no prompt."
       (goto-char (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold))
-    (display-buffer page)))
+    (let ((win (display-buffer page)))
+      (when help-window-select
+        (select-window win)))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
