@@ -12,7 +12,6 @@
 
 (require 'cl-lib)
 (require 'pcase)
-(require 'seq)
 
 (defvar ghelp-page-minor-mode-map
   (let ((map (make-sparse-keymap)))
@@ -107,10 +106,16 @@ If NO-PROMPT non-nil, no prompt."
          (window (when ghelp-page-minor-mode
                    (selected-window)))
          (backend/s (ghelp--get-backend mode))
-         (backends (if (ghelp-sync-backend-p backend/s) (list backend/s)
-                     backend/s))
-         (symbol-list (seq-mapcat #'ghelp-backend--symbol-list backends))
-         (default-symbol (symbol-name (symbol-at-point)))
+         (backends (if (ghelp-sync-backend-p backend/s)
+                       (list backend/s) backend/s))
+         ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
+         (symbol-lists (remove nil (mapcar #'ghelp-backend--symbol-list
+                                           backends)))
+         (symbol-list (apply (if (vectorp (car symbol-lists))
+                                 #'vconcat #'concat)
+                             symbol-lists))
+         (default-symbol (and (symbol-at-point)
+                              (symbol-name (symbol-at-point))))
          ;; insert default symbol if exists
          (prompt (format "Describe%s: "
                          (if default-symbol
