@@ -100,20 +100,25 @@ If MODE doesn’t point to anything, return itself."
 Select PAGE if ‘help-window-select’ is non-nil.
 If NO-PROMPT non-nil, no prompt."
   (interactive)
+  ;; resolve mode translation
   (let* ((mode (if ghelp-page-minor-mode
                    ghelp-page--mode
                  (ghelp--resolve-mode major-mode)))
+         ;; window we display page in
          (window (when ghelp-page-minor-mode
                    (selected-window)))
+         ;; fetch backends, make sure it’s a list
          (backend/s (ghelp--get-backend mode))
          (backends (if (ghelp-sync-backend-p backend/s)
                        (list backend/s) backend/s))
+         ;; fetch symbol list
          ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
          (symbol-lists (remove nil (mapcar #'ghelp-backend--symbol-list
                                            backends)))
          (symbol-list (apply (if (vectorp (car symbol-lists))
                                  #'vconcat #'concat)
                              symbol-lists))
+         ;; get symbol at point
          (default-symbol (and (symbol-at-point)
                               (symbol-name (symbol-at-point))))
          ;; insert default symbol if exists
@@ -126,6 +131,7 @@ If NO-PROMPT non-nil, no prompt."
          ;; translate "" to default or nil
          (symbol (if (equal symbol "") default-symbol symbol))
          (point (point-marker))
+         ;; get documentation
          (entry-list (mapcan (lambda (backend)
                                (ghelp-backend--describe-symbol
                                 backend symbol point))
