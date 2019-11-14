@@ -583,11 +583,15 @@ If FOLD non-nil, fold the entry after insertion."
                      (marker-buffer point)
                      point))))
 
-(defun ghelp-register-backend (mode symbol-list describe-fn)
+(defun ghelp-register-backend (mode &rest functions)
   ""
+  (when (oddp (length functions)) (error "FUNCTIONS doesn’t make pairs"))
   (setf (alist-get (ghelp--resolve-mode mode) ghelp-backend-alist)
-        (make-ghelp-sync-backend :symbol-list symbol-list
-                                 :describe-symbol describe-fn)))
+        (cl-loop for idx from 0 to (1- (length functions)) by 2
+                 for symbol-list = (nth idx functions)
+                 for describe-fn = (nth (1+ idx) functions)
+                 collect (make-ghelp-sync-backend :symbol-list symbol-list
+                                                  :describe-symbol describe-fn))))
 
 (cl-defstruct ghelp-sync-backend
   "Template backend for all synchronise ghelp backends.
