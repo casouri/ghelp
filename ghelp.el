@@ -98,6 +98,28 @@ If MODE doesn’t point to anything, return itself."
 
 ;;; Commands
 
+(defun ghelp--prompt-for-symbol (default-symbol backends)
+  "Prompt user for a symbol and return it.
+DEFAULT-SYMBOL is the default choice, BACKENDS is a list of
+backends used to fetch symbol list."
+  (let* (;; fetch symbol list
+         ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
+         (symbol-lists (remove
+                        nil (mapcar #'ghelp-backend--symbol-list
+                                    backends)))
+         (symbol-list (apply (if (vectorp (car symbol-lists))
+                                 #'vconcat #'concat)
+                             symbol-lists))
+         ;; insert default symbol if exists
+         (prompt (format "Describe%s: "
+                         (if default-symbol
+                             (format " (%s)" default-symbol)
+                           "")))
+         (symbol (completing-read prompt symbol-list))
+         ;; translate "" to default or nil
+         (symbol (if (equal symbol "") default-symbol symbol)))
+    symbol))
+
 (defun ghelp-describe-symbol (&optional no-prompt)
   "Describe symbol.
 Select PAGE if ‘help-window-select’ is non-nil.
@@ -107,44 +129,30 @@ If NO-PROMPT non-nil, no prompt."
          (mode (if ghelp-page-minor-mode
                    ghelp-page--mode
                  (ghelp--resolve-mode major-mode)))
-         ;; window we display page in
-         (window (when ghelp-page-minor-mode
-                   (selected-window)))
          ;; fetch backends, make sure it’s a list
          (backend/s (ghelp--get-backend mode))
          (backends (if (ghelp-sync-backend-p backend/s)
-                       (list backend/s) backend/s)))
+                       (list backend/s) backend/s))
+         symbol
+         (default-symbol (and (symbol-at-point)
+                              (symbol-name (symbol-at-point))))
+         ;; window we display page in
+         (window (when ghelp-page-minor-mode
+                   (selected-window)))
+         (point (point-marker))
+         (page nil))
     (if (not backends)
         (user-error "No backend for %s" major-mode)
-      (let* (;; fetch symbol list
-             ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
-             (symbol-lists (remove
-                            nil (mapcar #'ghelp-backend--symbol-list
-                                        backends)))
-             (symbol-list (apply (if (vectorp (car symbol-lists))
-                                     #'vconcat #'concat)
-                                 symbol-lists))
-             ;; get symbol at point
-             (default-symbol (and (symbol-at-point)
-                                  (symbol-name (symbol-at-point))))
-             ;; insert default symbol if exists
-             (prompt (format "Describe%s: "
-                             (if default-symbol
-                                 (format " (%s)" default-symbol)
-                               "")))
-             (symbol (if no-prompt default-symbol
-                       (completing-read prompt symbol-list)))
-             ;; translate "" to default or nil
-             (symbol (if (equal symbol "") default-symbol symbol))
-             (point (point-marker))
-             ;; get documentation
-             (entry-list (mapcan (lambda (backend)
-                                   (ghelp-backend--describe-symbol
-                                    backend symbol point))
-                                 backends))
-             page)
-        (unless symbol (user-error "No symbol at point"))
-        (ghelp--show-page symbol mode point page entry-list window)))))
+      ;; get symbol
+      (setq symbol (if no-prompt default-symbol
+                     (ghelp--prompt-for-symbol default-symbol backends)))
+      (unless symbol (user-error "No symbol at point"))
+      ;; get documentation
+      (setq entry-list (mapcan (lambda (backend)
+                                 (ghelp-backend--describe-symbol
+                                  backend symbol point))
+                               backends))
+      (ghelp--show-page symbol mode point page entry-list window))))
 
 (defun ghelp-refresh ()
   "Refresh current page."
