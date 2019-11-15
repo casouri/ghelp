@@ -84,11 +84,11 @@
     (define-key map "g" #'ghelp-refresh)
     map))
 
-(define-minor-mode ghelp-minor-mode
+(define-minor-mode ghelp-global-minor-mode
   "Setup ghelp backends."
   :lighter ""
   :global t
-  (if (not ghelp-minor-mode)
+  (if (not ghelp-global-minor-mode)
       (setq ghelp-backend-alist nil)
     (when (require 'helpful nil t)
       (require 'ghelp-helpful)
