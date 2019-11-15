@@ -73,16 +73,7 @@
 
 ;;; Global
 
-(defvar ghelp-page-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "TAB") #'ghelp-toggle-entry)
-    (define-key map "q" #'ghelp-close)
-    (define-key map "b" #'ghelp-back)
-    (define-key map "f" #'ghelp-forward)
-    (define-key map "n" #'ghelp-next-entry)
-    (define-key map "p" #'ghelp-previous-entry)
-    (define-key map "g" #'ghelp-refresh)
-    map))
+
 
 (define-minor-mode ghelp-global-minor-mode
   "Setup ghelp backends."
@@ -105,16 +96,6 @@
       (ghelp-register-backend 'python-mode
                               nil
                               #'ghelp-eglot--describe-symbol))))
-
-(define-minor-mode ghelp-page-minor-mode
-  ""
-  :lighter ""
-  :keymap 'ghelp-page-minor-mode-map
-  (if ghelp-page-minor-mode
-      (progn
-        ;; (setq header-line-format ghelp-page--header-line-format)
-        (setq buffer-read-only t))
-    (setq buffer-read-only nil)))
 
 ;;; Etc
 
@@ -539,6 +520,28 @@ Each entry is a ‘ghelp-entry’.")
 ;; - ‘ghelp-folded-entry’
 ;; - ‘ghelp-entry’
 
+;;;;; Modes
+
+(defvar ghelp-page-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "TAB") #'ghelp-toggle-entry)
+    (define-key map "q" #'ghelp-close)
+    (define-key map "b" #'ghelp-back)
+    (define-key map "f" #'ghelp-forward)
+    (define-key map "n" #'ghelp-next-entry)
+    (define-key map "p" #'ghelp-previous-entry)
+    (define-key map "g" #'ghelp-refresh)
+    map))
+
+(define-minor-mode ghelp-page-minor-mode
+  ""
+  :lighter ""
+  :keymap 'ghelp-page-minor-mode-map
+  (if ghelp-page-minor-mode
+      (progn
+        ;; (setq header-line-format ghelp-page--header-line-format)
+        (setq buffer-read-only t))
+    (setq buffer-read-only nil)))
 
 ;;;;; Variables
 
