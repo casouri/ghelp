@@ -6,12 +6,72 @@
 
 ;;; Commentary:
 ;;
+;; * Usage
+
+;; Use these functions:
+
+;; - ‘ghelp-describe-symbol’
+;; - ‘ghelp-describe-at-point’
+
+;; * Terminology
+
+;; - ghelp   :: this package
+
+;; - page    :: the buffer displaying documentation
+
+;; - backend :: the backend providing documentation
+
+;; - entry   :: page is made of entries. Each entry is a self-contained
+;; documentation for the symbol. Each symbol can be
+;; interpreted in different ways and we present each
+;; interpretation’s documentation in a entry.
+
+;; - history :: Each major-mode has it’s own page history
+
+;; * Page anatomy
+
+;; <entry>
+;; <newline>
+;; <entry>
+;; <newline>
+;; ...
+
+;; * Entry anatomy
+
+;; <title>
+;; <text>
+
+;; * Backends
+
+;; Each backend is essentially two functions: symbol-list and
+;; describe-symbol. ‘symbol-list’ returns a list of symbols and
+;; ‘describe-symbol’, given symbol, buffer and point information, returns
+;; a list of entries to be displayed. Read the docsting of
+;; ‘ghelp-sync-backend’ for more information.
+
+;; * History
+
+;; ‘ghelp-history’ is specialized for ghelp:
+
+;; 1. new nodes are always added to the end of the history
+;; 2. when looking for a particular node, you can optionally
+;; move that node to the end of the history. See
+;; ‘ghelp-history--find-and-move’.
+
+;; * Code structure
+
+;; ghelp is made of several parts: ghelp-describe, ghelp-history,
+;; ghelp-page, ghelp-entry, ghelp-backend. They don’t know the detail of
+;; each other and only communicate by “exposed” functions. You can find
+;; the “exposed” functions on the beginning of each section.
 
 ;;; Code:
 ;;
 
 (require 'cl-lib)
 (require 'pcase)
+
+;;; Global
 
 (defvar ghelp-page-minor-mode-map
   (let ((map (make-sparse-keymap)))
@@ -202,6 +262,17 @@ If non-nil, use WINDOW to display PAGE."
   (ghelp-describe-symbol t))
 
 ;;; History
+;;
+;; Functions:
+;;
+;; - ‘ghelp-history--to-candidates’
+;; - ‘ghelp--get-history’
+;; - ‘ghelp-history--goto’
+;; - ‘ghelp-history--find-and-move’
+;; - ‘ghelp-history--find’
+;; - ‘ghelp-history--push’
+;; - ‘ghelp-history--forward’
+;; - ‘ghelp-history--back’
 
 (defvar ghelp-history-max-length 50
   "Maximum length of each history.
@@ -349,6 +420,15 @@ The symbols are those in HISTORY and can be used for
 ;;; Display
 
 ;;;; Entry
+;;
+;; Functions:
+;;
+;; - ‘ghelp-entry-fold’
+;; - ‘ghelp-entry-unfold’
+;; - ‘ghelp-previous-entry’
+;; - ‘ghelp-next-entry’
+;; - ‘ghelp-toggle-entry’
+
 
 (defvar-local ghelp--page-entry-list nil
   "A list of documentation entries.
@@ -449,6 +529,16 @@ Each entry is a ‘ghelp-entry’.")
   (overlay-put overlay 'face 'ghelp-entry))
 
 ;;;; Page
+;;
+;; - ‘ghelp-page--insert-entry’
+;; - ‘ghelp-page--clear’
+;; - ‘ghelp--get-page-or-create’
+;; - ‘ghelp-switch-to-page’
+;; - ‘ghelp-forward’
+;; - ‘ghelp-back’
+;; - ‘ghelp-folded-entry’
+;; - ‘ghelp-entry’
+
 
 ;;;;; Variables
 
@@ -625,6 +715,10 @@ If FOLD non-nil, fold the entry after insertion."
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
 ;;; Backend
+;;
+;; Functions:
+;;
+;; - ‘ghelp-register-backend’
 
 (defvar ghelp-backend-alist ()
   "An alist of (major-mode . (backend ...)). ")
