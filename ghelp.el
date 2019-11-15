@@ -26,10 +26,12 @@
 (define-minor-mode ghelp-minor-mode
   "Setup ghelp backends."
   :lighter ""
+  :global t
   (if (not ghelp-minor-mode)
       (setq ghelp-backend-alist nil)
-    (when (featurep 'helpful)
+    (when (require 'helpful nil t)
       (require 'ghelp-helpful)
+      (require 'ghelp-face)
       (ghelp-register-backend 'emacs-lisp-mode
                               (lambda () obarray)
                               #'ghelp-helpful-describe-symbol
@@ -37,7 +39,7 @@
                               ;; in obarray
                               nil
                               #'ghelp-face-describe-symbol))
-    (when (featurep 'eglot)
+    (when (require 'eglot nil t)
       (require 'ghelp-eglot)
       (ghelp-register-backend 'python-mode
                               nil
