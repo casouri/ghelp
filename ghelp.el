@@ -237,19 +237,6 @@ if VAL <= MIN, return MIN,
 if VAL >= MAX, return MAX."
   (max min (min max val)))
 
-(defun ghelp-history--nth-live-buffer (idx history)
-  "Return the IDX’th node of HISTORY.
-
-If it’s buffer is dead, remove the node and return nil."
-  (let* ((nodes (ghelp-history-nodes history))
-         (node (nth idx nodes))
-         (buf (ghelp-history-node-buffer node)))
-    (if (buffer-live-p buf) buf
-      (setf (ghelp-history-nodes history)
-            (append (cl-subseq nodes 0 idx)
-                    (nthcdr (1+ idx) nodes)))
-      nil)))
-
 (defun ghelp-history--back (history count)
   "Go back COUNT steps in HISTORY, return the corresponding node or nil.
 
@@ -291,15 +278,48 @@ the last one. COUNT can be negative."
   (when-let ((cell (ghelp-history--find-1 history symbol)))
     (car cell)))
 
-(defun ghelp-history--find-1 (history symbol)
-  "Return (page . index) describing SYMBOL in HISTORY or nil."
+(defun ghelp-history--find-and-move (history symbol)
+  "Return the page (buffer) describing SYMBOL in HISTORY or nil.
+
+Unlike ‘ghelp-history--find’, move the node to be the latest node."
+  (when-let ((cell (ghelp-history--find-1 history symbol t)))
+    (car cell)))
+
+(defun ghelp-history--find-1 (history symbol &optional move)
+  "Return (page . index) describing SYMBOL in HISTORY or nil.
+
+If MOVE non-nil, move the node to the end of the history."
   (let ((idx (cl-loop for node       in (ghelp-history-nodes history)
                       for idx         = 0 then (1+ idx)
                       for node-symbol = (ghelp-history-node-symbol node)
                       if (equal symbol node-symbol)
                       return idx
                       finally return nil)))
-    (when idx (cons (ghelp-history--nth-live-buffer idx history) idx))))
+    (when idx (cons (ghelp-history-node-buffer
+                     (ghelp-history--nth-live idx history move))
+                    idx))))
+
+(defun ghelp-history--nth-live (idx history &optional move)
+  "Return the IDX’th node of HISTORY or nil.
+
+If MOVE non-nil, move the node to the end of HISTORY.
+If the buffer of that node is dead, remove it and return nil."
+  (let* ((nodes (ghelp-history-nodes history))
+         (node (nth idx nodes))
+         (buf (ghelp-history-node-buffer node))
+         ;; nodes minus the node
+         (nodes-w/o-node (append (cl-subseq nodes 0 idx)
+                                 (nthcdr (1+ idx) nodes))))
+    (if (not (buffer-live-p buf))
+        (prog1 nil
+          (setf (ghelp-history-nodes history)
+                nodes-w/o-node))
+      ;; node has a live buffer, maybe move it
+      (when move
+        (setf (ghelp-history-nodes history)
+              (cons node nodes-w/o-node)))
+      ;; return
+      node)))
 
 (defun ghelp-history--goto (history symbol)
   "Go to node w/ SYMBOL in HISTORY and return that node or nil."
@@ -532,7 +552,8 @@ Each entry is a ‘ghelp-entry’.")
   "Return the page for MODE (major mode) and SYMBOL.
 Assume a history is avaliable for MODE, else error."
   (let* ((history (ghelp--get-history mode))
-         (page (ghelp-history--find history symbol)))
+         ;; find and move the page to the end of history
+         (page (ghelp-history--find-and-move history symbol)))
     (or page
         (prog1 (setq page (ghelp--generate-new-page mode symbol))
           (with-current-buffer page
