@@ -106,19 +106,21 @@ backends used to fetch symbol list."
          ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
          (symbol-lists (remove
                         nil (mapcar #'ghelp-backend--symbol-list
-                                    backends)))
-         (symbol-list (apply (if (vectorp (car symbol-lists))
-                                 #'vconcat #'concat)
-                             symbol-lists))
-         ;; insert default symbol if exists
-         (prompt (format "Describe%s: "
-                         (if default-symbol
-                             (format " (%s)" default-symbol)
-                           "")))
-         (symbol (completing-read prompt symbol-list))
-         ;; translate "" to default or nil
-         (symbol (if (equal symbol "") default-symbol symbol)))
-    symbol))
+                                    backends))))
+    (if (not symbol-lists)
+        default-symbol
+      (let* ((symbol-list (apply (if (vectorp (car symbol-lists))
+                                     #'vconcat #'concat)
+                                 symbol-lists))
+             ;; insert default symbol if exists
+             (prompt (format "Describe%s: "
+                             (if default-symbol
+                                 (format " (%s)" default-symbol)
+                               "")))
+             (symbol (completing-read prompt symbol-list))
+             ;; translate "" to default or nil
+             (symbol (if (equal symbol "") default-symbol symbol)))
+        symbol))))
 
 (defun ghelp-describe-symbol (&optional no-prompt)
   "Describe symbol.
