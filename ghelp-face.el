@@ -116,7 +116,8 @@ If FRAME is omitted or nil, use the selected frame."
                             (help-xref-button 1 'help-face attr)))
                       (insert "\n")))))
               (terpri)))
-          (list (list symbol (buffer-string))))))))
+          (let ((yank-excluded-properties nil))
+            (list (list symbol (buffer-string)))))))))
 
 (provide 'ghelp-face)
 

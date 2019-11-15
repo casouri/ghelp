@@ -51,7 +51,8 @@
         (let ((inhibit-read-only t))
           (goto-char (point-max))
           (insert "\n"))
-        (prog1 (buffer-string)
+        (prog1 (let ((yank-excluded-properties nil))
+                 (buffer-string))
           (kill-buffer buf))))))
 
 ;;; Modified helpful.el code

@@ -15,6 +15,7 @@
 
 (defvar ghelp-page-minor-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "TAB") #'ghelp-toggle-entry)
     (define-key map "q" #'ghelp-close)
     (define-key map "b" #'ghelp-back)
     (define-key map "f" #'ghelp-forward)
@@ -452,11 +453,11 @@ Each entry is a ‘ghelp-entry’.")
 (defvar-local ghelp-page--point nil
   "Point that was passed to ‘ghelp-describe-symbol’.")
 
-(defvar ghelp-entry-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "TAB") #'ghelp-toggle-entry)
-    map)
-  "Keymap activated when point is in an entry.")
+;; (defvar ghelp-entry-map
+;;   (let ((map (make-sparse-keymap)))
+;;     (define-key map (kbd "TAB") #'ghelp-toggle-entry)
+;;     map)
+;;   "Keymap activated when point is in an entry.")
 
 ;; FIXME not working
 (defvar ghelp-page--header-line-format
@@ -558,7 +559,8 @@ If FOLD non-nil, fold the entry after insertion."
         (overlay-put ov 'ghelp-entry-name name)
         (overlay-put ov 'face 'ghelp-entry)
         ;; FIXME keymap as a symbol doesn’t seem to work
-        (overlay-put ov 'keymap ghelp-entry-map)
+        ;; keymap property blocks text buttons
+        ;; (overlay-put ov 'keymap ghelp-entry-map)
         (when fold (ghelp-entry--fold ov))
         entry))))
 
