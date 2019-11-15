@@ -539,7 +539,7 @@ Each entry is a ‘ghelp-entry’.")
 (defun ghelp--generate-new-page (mode symbol)
   "Generate a new page for MODE (major mode) and SYMBOL and return it.
 
-!! This function doesn’t set ‘ghelp-page--history’. Be aware !!"
+!! This function doesn’t set variable ‘ghelp-page--history’. Be aware !!"
   (with-current-buffer (generate-new-buffer
                         (ghelp--page-name-from mode symbol))
     ;; TODO setup buffer
@@ -616,7 +616,7 @@ If FOLD non-nil, fold the entry after insertion."
                              map)))
 
 (defun ghelp-page--history ()
-  "Return non-nil ‘ghelp-page--history’ or error."
+  "Return non-nil ‘ghelp-page-history’ or error."
   (or ghelp-page--history
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
@@ -647,7 +647,12 @@ If FOLD non-nil, fold the entry after insertion."
                      point))))
 
 (defun ghelp-register-backend (mode &rest functions)
-  ""
+  "Register backends for MODE.
+FUNCTIONS is a list
+
+    (SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN ...)
+
+Each pair of functions corresponds to a backend."
   (when (oddp (length functions)) (error "FUNCTIONS doesn’t make pairs"))
   (setf (alist-get (ghelp--resolve-mode mode) ghelp-backend-alist)
         (cl-loop for idx from 0 to (1- (length functions)) by 2
