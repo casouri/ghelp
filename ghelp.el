@@ -249,7 +249,8 @@ the last one. COUNT can be negative."
          (len (length nodes))
          (new-idx (ghelp--within 0 (+ point count) (1- len))))
     (setf (ghelp-history-point history) new-idx)
-    (ghelp-history--nth-live-buffer new-idx history)))
+    (ghelp-history-node-buffer
+     (ghelp-history--nth-live new-idx history))))
 
 (defun ghelp-history--forward (history count)
   "Go forward COUNT steps in HISTORY, return the node or nil.
