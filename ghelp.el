@@ -181,13 +181,12 @@ Select PAGE if ‘help-window-select’ is non-nil.
 If non-nil, use WINDOW to display PAGE."
   (if (not entry-list)
       (message "No documentation for %s" symbol)
-    (setq page (ghelp--get-page-or-create mode symbol))
+    (setq page (ghelp--get-page-or-create mode symbol point))
     (ghelp-page--clear page)
     (dolist (entry entry-list)
       (ghelp-page--insert-entry entry page t))
     ;; unfold the last entry
     (with-current-buffer page
-      (setq ghelp-page--point point)
       (goto-char (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold))
@@ -551,16 +550,18 @@ Each entry is a ‘ghelp-entry’.")
           ghelp-page--mode mode)
     (current-buffer)))
 
-(defun ghelp--get-page-or-create (mode symbol)
+(defun ghelp--get-page-or-create (mode symbol point)
   "Return the page for MODE (major mode) and SYMBOL.
-Assume a history is avaliable for MODE, else error."
+Assume a history is avaliable for MODE, else error.
+POINT is the point of the symbol."
   (let* ((history (ghelp--get-history mode))
          ;; find and move the page to the end of history
          (page (ghelp-history--find-and-move history symbol)))
     (or page
         (prog1 (setq page (ghelp--generate-new-page mode symbol))
           (with-current-buffer page
-            (setq ghelp-page--history history))
+            (setq ghelp-page--history history
+                  ghelp-page--point point))
           (ghelp-history--push page mode symbol history)))))
 
 (defun ghelp-page--clear (page)
