@@ -73,7 +73,11 @@
 
 ;;; Global
 
-
+(defvar ghelp-map (let ((map (make-sparse-keymap)))
+                    (define-key map (kbd "C-h") #'ghelp-describe-symbol)
+                    (define-key map (kbd "C-p") #'ghelp-describe-at-point)
+                    map)
+  "Map for ghelp. Bind this map to some entry key sequence.")
 
 (define-minor-mode ghelp-global-minor-mode
   "Setup ghelp backends."
