@@ -145,6 +145,12 @@ If MODE doesn’t point to anything, return itself."
 
 ;;; Commands
 
+(defun ghelp--describe-as-in (mode)
+  "Return a describe function that thinks it’s in MODE."
+  (lambda () (interactive)
+    (let ((ghelp--overwrite-mode mode))
+      (ghelp-describe-symbol))))
+
 (defun ghelp--prompt-for-symbol (default-symbol backends)
   "Prompt user for a symbol and return it.
 DEFAULT-SYMBOL is the default choice, BACKENDS is a list of
@@ -177,7 +183,7 @@ If NO-PROMPT non-nil, no prompt."
   (let* (;; resolve mode translation
          (mode (if ghelp-page-minor-mode
                    ghelp-page--mode
-                 (ghelp--resolve-mode major-mode)))
+                 (ghelp--resolve-mode (ghelp--mode))))
          ;; fetch backends, make sure it’s a list
          (backend/s (ghelp--get-backend mode))
          (backends (if (ghelp-sync-backend-p backend/s)
@@ -191,7 +197,7 @@ If NO-PROMPT non-nil, no prompt."
          (point (point-marker))
          (page nil))
     (if (not backends)
-        (user-error "No backend for %s" major-mode)
+        (user-error "No backend for %s" mode)
       ;; get symbol
       (setq symbol (if no-prompt default-symbol
                      (ghelp--prompt-for-symbol default-symbol backends)))
@@ -247,6 +253,16 @@ If non-nil, use WINDOW to display PAGE."
   "Describe symbol at point."
   (interactive)
   (ghelp-describe-symbol t))
+
+;; Helpers
+
+(defvar-local ghelp--overwrite-mode nil
+  "Overwrite ‘major-mode’ with this mode.")
+
+(defsubst ghelp--mode ()
+  "Return major mode for use."
+  (or ghelp--overwrite-mode
+      major-mode))
 
 ;;; History
 ;;
