@@ -397,7 +397,8 @@ If the buffer of that node is dead, remove it and return nil."
                 nodes-w/o-node))
       ;; node has a live buffer, maybe move it
       (when move
-        (setf (ghelp-history-nodes history)
+        (setf (ghelp-history-point history) 0
+              (ghelp-history-nodes history)
               (cons node nodes-w/o-node)))
       ;; return
       node)))
