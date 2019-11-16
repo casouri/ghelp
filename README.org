@@ -2,6 +2,8 @@
 
 This package provides a generic help system similar to Emacs Help. Unlike Emacs Help, ghelp works for more major-modes and is extensible with backends.
 
+[[https://github.com/casouri/ghelp#screencasts][☞ Screencasts]]
+
 Currently supported backends:
 - [[https://github.com/Wilfred/helpful][helpful]]
 - [[https://github.com/joaotavora/eglot][eglot]]
@@ -56,3 +58,11 @@ to look up Emacs symbols regardless of which major mode you are currently in.
 Each backend is essentially two functions: one returns a list of symbols it knows (or return nil if it can’t), the other returns a list of entries, given informations like symbol or point.
 
 One you have your functions, you can use ~ghelp-register-backend~ to register your backend to a major mode.
+* Screencasts
+*Eglot*
+
+[[./ghelp-eglot-800.gif]]
+
+*Helpful*
+
+[[./ghelp-helpful-800.gif]]
