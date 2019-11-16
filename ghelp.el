@@ -167,7 +167,7 @@ backends used to fetch symbol list."
     (if (not symbol-lists)
         default-symbol
       (let* ((symbol-list (apply (if (vectorp (car symbol-lists))
-                                     #'vconcat #'concat)
+                                     #'vconcat #'append)
                                  symbol-lists))
              ;; insert default symbol if exists
              (prompt (format "Describe%s: "
