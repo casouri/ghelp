@@ -763,13 +763,20 @@ If FOLD non-nil, fold the entry after insertion."
   "Ask BACKEND for documentation entries for SYMBOL at POINT (marker)."
   (when-let ((fn (ghelp-sync-backend-describe-symbol backend)))
     (mapcar (lambda (entry)
-              (make-ghelp-entry
-               :name (car entry)
-               :text (cadr entry)))
-            (funcall fn
-                     (if (symbolp symbol) (symbol-name symbol) symbol)
-                     (marker-buffer point)
-                     point))))
+              (when entry
+                (make-ghelp-entry
+                 :name (car entry)
+                 :text (cadr entry))))
+            (condition-case err
+                (funcall fn
+                         (if (symbolp symbol) (symbol-name symbol) symbol)
+                         (marker-buffer point)
+                         point)
+              ((debug error)
+               (message
+                "Ghelp: error occurred in backend function %s: %s"
+                fn (error-message-string err))
+               nil)))))
 
 (defun ghelp-register-backend (mode &rest functions)
   "Register backends for MODE.
