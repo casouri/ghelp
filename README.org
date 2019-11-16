@@ -44,7 +44,13 @@ Commands you can use:
 * Customization
 If you want several major modes to share the same set of history and backends (like ~lisp-interaction-mode~ and ~emacs-lisp-mode~), add an entry ~(mode1 . mode2)~ to ~ghelp-mode-share-alist~, and ~mode1~ will share everything of ~mode2~.
 
-You can customize some faces: ~ghelp-entry~, ~ghelp-folded-entry~, and ~ghelp-entry-title~.
+You can customize faces: ~ghelp-entry~, ~ghelp-folded-entry~, and ~ghelp-entry-title~.
+
+Normally if you call ~ghelp-describe-function~ it selects the backends to use by the current major-mode. If you want to look up some symbol with a specific backend, try ~(ghelp-describe-as-in 'mode)~. This function returns a modified ~ghelp-describe-function~ that selects backends by ~mode~. For example, you can bind
+#+BEGIN_SRC emacs-lisp
+(define-key (kbd "C-h C-e") (ghelp-describe-as-in ’emacs-lisp-mode))
+#+END_SRC
+to look up Emacs symbols everywhere.
 
 * Write a backend
 Each backend is essentially two functions: one returns a list of symbols it knows (or return nil if it can’t), the other returns a list of entries, given informations like symbol or point.
