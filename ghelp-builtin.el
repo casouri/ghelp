@@ -130,7 +130,7 @@ If FRAME is omitted or nil, use the selected frame."
       (when-let ((class (cl-find-class symbol)))
         (cl--describe-class symbol class))
       (let ((yank-excluded-properties nil))
-        (buffer-string)))))
+        (list (list symbol (buffer-string)))))))
 
 (provide 'ghelp-builtin)
 
