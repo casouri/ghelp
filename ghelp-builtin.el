@@ -128,9 +128,9 @@ If FRAME is omitted or nil, use the selected frame."
     (let ((standard-output (current-buffer))
           (symbol (intern-soft symbol)))
       (when-let ((class (cl-find-class symbol)))
-        (cl--describe-class symbol class))
-      (let ((yank-excluded-properties nil))
-        (list (list symbol (buffer-string)))))))
+        (cl--describe-class symbol class)
+        (let ((yank-excluded-properties nil))
+          (list (list symbol (buffer-string))))))))
 
 (provide 'ghelp-builtin)
 
