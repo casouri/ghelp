@@ -57,6 +57,7 @@
 ;; 2. when looking for a particular node, you can optionally
 ;; move that node to the end of the history. See
 ;; ‘ghelp-history--find-and-move’.
+;; 3. pushing into history moves point to the end of the history.
 
 ;; * Code structure
 
@@ -347,7 +348,8 @@ the last one. COUNT can be negative."
                 (if (< (length nodes) ghelp-history-max-length)
                     nodes
                   (kill-buffer (ghelp-history-node-buffer (last nodes)))
-                  (butlast nodes)))))
+                  (butlast nodes)))
+          (ghelp-history-point history) 0))
 
   buffer)
 
