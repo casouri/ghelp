@@ -76,6 +76,8 @@
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
                     (define-key map (kbd "C-p") #'ghelp-describe-at-point)
+                    (define-key map "h" #'help-command)
+                    (define-key map "e" (ghelp--describe-as-in 'emacs-lisp-mode))
                     map)
   "Map for ghelp. Bind this map to some entry key sequence.")
 
