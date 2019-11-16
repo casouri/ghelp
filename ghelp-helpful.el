@@ -1,7 +1,5 @@
 ;;; ghelp-helpful.el --- Ghelp+Helpful      -*- lexical-binding: t; -*-
 
-;; Author (partially): Yuan Fu <casouri@gmail.com>
-
 ;;; This file is NOT part of GNU Emacs
 
 ;;; Commentary:

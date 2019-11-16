@@ -1,7 +1,5 @@
 ;;; ghelp-eglot.el --- Ghelp+Eglot      -*- lexical-binding: t; -*-
 
-;; Author(Partially): Yuan Fu <casouri@gmail.com>
-
 ;;; This file is NOT part of GNU Emacs
 
 ;;; Commentary:

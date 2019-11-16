@@ -1,7 +1,5 @@
 ;;; ghelp-builtin.el --- Ghelp+builtin      -*- lexical-binding: t; -*-
 
-;; Author: Yuan Fu <casouri@gmail.com>
-
 ;;; This file is NOT part of GNU Emacs
 
 ;;; Commentary:
