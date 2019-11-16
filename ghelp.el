@@ -74,11 +74,17 @@
 
 ;;; Global
 
+(defun ghelp-describe-as-in (mode)
+  "Return a describe function that thinks it’s in MODE."
+  (lambda () (interactive)
+    (let ((ghelp--overwrite-mode mode))
+      (ghelp-describe-symbol))))
+
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
                     (define-key map (kbd "C-p") #'ghelp-describe-at-point)
                     (define-key map "h" #'help-command)
-                    (define-key map "e" (ghelp--describe-as-in 'emacs-lisp-mode))
+                    (define-key map "e" (ghelp-describe-as-in 'emacs-lisp-mode))
                     map)
   "Map for ghelp. Bind this map to some entry key sequence.")
 
@@ -147,12 +153,6 @@ If MODE doesn’t point to anything, return itself."
            finally (delete-window)))
 
 ;;; Commands
-
-(defun ghelp--describe-as-in (mode)
-  "Return a describe function that thinks it’s in MODE."
-  (lambda () (interactive)
-    (let ((ghelp--overwrite-mode mode))
-      (ghelp-describe-symbol))))
 
 (defun ghelp--prompt-for-symbol (default-symbol backends)
   "Prompt user for a symbol and return it.
