@@ -6,14 +6,14 @@
 
 ;;; Commentary:
 ;;
-;; * Usage
+;;;; Usage
 
 ;; Use these functions:
 
 ;; - ‘ghelp-describe-symbol’
 ;; - ‘ghelp-describe-at-point’
 
-;; * Terminology
+;;;; Terminology
 
 ;; - ghelp   :: this package
 
@@ -28,7 +28,7 @@
 
 ;; - history :: Each major-mode has it’s own page history
 
-;; * Page anatomy
+;;;; Page anatomy
 
 ;; <entry>
 ;; <newline>
@@ -36,12 +36,12 @@
 ;; <newline>
 ;; ...
 
-;; * Entry anatomy
+;;;; Entry anatomy
 
 ;; <title>
 ;; <text>
 
-;; * Backends
+;;;; Backends
 
 ;; Each backend is essentially two functions: symbol-list and
 ;; describe-symbol. ‘symbol-list’ returns a list of symbols and
@@ -49,7 +49,7 @@
 ;; a list of entries to be displayed. Read the docsting of
 ;; ‘ghelp-sync-backend’ for more information.
 
-;; * History
+;;;; History
 
 ;; ‘ghelp-history’ is specialized for ghelp:
 
@@ -59,7 +59,7 @@
 ;; ‘ghelp-history--find-and-move’.
 ;; 3. pushing into history moves point to the end of the history.
 
-;; * Code structure
+;;;; Code structure
 
 ;; ghelp is made of several parts: ghelp-describe, ghelp-history,
 ;; ghelp-page, ghelp-entry, ghelp-backend. They don’t know the detail of
