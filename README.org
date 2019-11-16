@@ -1,0 +1,51 @@
+#+TITLE: ghelp
+
+This package provides a generic help system similar to Emacs Help. Unlike Emacs Help, ghelp works for more major-modes and is extensible with backends.
+
+Currently supported backends:
+- [[https://github.com/Wilfred/helpful][helpful]]
+- [[https://github.com/joaotavora/eglot][eglot]]
+
+* Install & load
+
+Download the files and add them to load path.
+
+With ~use-package~:
+#+BEGIN_SRC emacs-lisp
+(use-package ghelp
+  :config (ghelp-global-minor-mode))
+#+END_SRC
+Without ~use-package~:
+#+BEGIN_SRC emacs-lisp
+(require 'ghelp)
+(ghelp-global-minor-mode)
+#+END_SRC
+
+* Usage
+Currently you can bind ~ghelp-describe-symbol~ and ~ghelp-describe-at-point~ to a keybinding you like, or bind ~ghelp-map~.
+
+* In ghelp buffer
+A ghelp buffet is called a page. Each page is made of several entries. Each entry is a self-contained documentation. (For example, you could have a entry for a symbol as a function and another one for it as a variable.)
+
+Commands you can use:
+
+| Key           | Command                        |
+|---------------+--------------------------------|
+| =f/b=         | go forward/backward in history |
+| =n/p=         | next/previous entry            |
+| =m/[=         | next/previous button           |
+| =TAB=         | collapse/expand entry          |
+| =g=           | refresh page                   |
+| =q=           | close page                     |
+| =<space>=     | scroll down                    |
+| =<backspace>= | scroll up                      |
+
+* Customization
+If you want several major modes to share the same set of history and backends (like ~lisp-interaction-mode~ and ~emacs-lisp-mode~), add an entry ~(mode1 . mode2)~ to ~ghelp-mode-share-alist~, and ~mode1~ will share everything of ~mode2~.
+
+You can customize some faces: ~ghelp-entry~, ~ghelp-folded-entry~, and ~ghelp-entry-title~.
+
+* Write a backend
+Each backend is essentially two functions: one returns a list of symbols it knows (or return nil if it can’t), the other returns a list of entries, given informations like symbol or point.
+
+One you have your functions, you can use ~ghelp-register-backend~ to register your backend to a major mode.
