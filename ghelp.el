@@ -83,14 +83,16 @@
       (setq ghelp-backend-alist nil)
     (when (require 'helpful nil t)
       (require 'ghelp-helpful)
-      (require 'ghelp-face)
+      (require 'ghelp-builtin)
       (ghelp-register-backend 'emacs-lisp-mode
                               (lambda () obarray)
                               #'ghelp-helpful-describe-symbol
                               ;; this doesn’t matter since faces are
                               ;; in obarray
                               nil
-                              #'ghelp-face-describe-symbol))
+                              #'ghelp-face-describe-symbol
+                              nil
+                              #'ghelp-cl-type-describe-symbol))
     (when (require 'eglot nil t)
       (require 'ghelp-eglot)
       (ghelp-register-backend 'python-mode

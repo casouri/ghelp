@@ -1,4 +1,4 @@
-;;; ghelp-face.el --- Ghelp+Face      -*- lexical-binding: t; -*-
+;;; ghelp-builtin.el --- Ghelp+builtin      -*- lexical-binding: t; -*-
 
 ;; Author: Yuan Fu <casouri@gmail.com>
 
@@ -9,6 +9,8 @@
 
 ;;; Code:
 ;;
+
+;;; Face
 
 (defun ghelp-face-describe-symbol (symbol buffer point)
   "Display the properties of face FACE on FRAME.
@@ -119,6 +121,17 @@ If FRAME is omitted or nil, use the selected frame."
           (let ((yank-excluded-properties nil))
             (list (list symbol (buffer-string)))))))))
 
-(provide 'ghelp-face)
+;;; cl-class
 
-;;; ghelp-face.el ends here
+(defun ghelp-cl-type-describe-symbol (symbol buffer point)
+  (with-temp-buffer
+    (let ((standard-output (current-buffer))
+          (symbol (intern-soft symbol)))
+      (when-let ((class (cl-find-class symbol)))
+        (cl--describe-class symbol class))
+      (let ((yank-excluded-properties nil))
+        (buffer-string)))))
+
+(provide 'ghelp-builtin)
+
+;;; ghelp-builtin.el ends here
