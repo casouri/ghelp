@@ -50,7 +50,7 @@ Normally if you call ~ghelp-describe-function~ it selects the backends to use by
 #+BEGIN_SRC emacs-lisp
 (define-key (kbd "C-h C-e") (ghelp-describe-as-in ’emacs-lisp-mode))
 #+END_SRC
-to look up Emacs symbols everywhere.
+to look up Emacs symbols regardless of which major mode you are currently in.
 
 * Write a backend
 Each backend is essentially two functions: one returns a list of symbols it knows (or return nil if it can’t), the other returns a list of entries, given informations like symbol or point.
