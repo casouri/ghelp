@@ -145,8 +145,9 @@ If MODE doesn’t point to anything, return itself."
   (interactive)
   (cl-loop for buffer1 in (window-prev-buffers)
            for buffer = (car buffer1)
-           for is-ghelp = (buffer-local-value
-                           'ghelp-page-minor-mode buffer)
+           for is-ghelp = (eq 'ghelp-page-mode
+                              (buffer-local-value
+                               'major-mode buffer))
            if (not is-ghelp)
            do (switch-to-buffer buffer)
            and return nil
@@ -184,7 +185,7 @@ Select PAGE if ‘help-window-select’ is non-nil.
 If NO-PROMPT non-nil, no prompt."
   (interactive)
   (let* (;; resolve mode translation
-         (mode (if ghelp-page-minor-mode
+         (mode (if (eq major-mode 'ghelp-page-mode)
                    ghelp-page--mode
                  (ghelp--resolve-mode (ghelp--mode))))
          ;; fetch backends, make sure it’s a list
@@ -195,7 +196,7 @@ If NO-PROMPT non-nil, no prompt."
          (default-symbol (and (symbol-at-point)
                               (symbol-name (symbol-at-point))))
          ;; window we display page in
-         (window (when ghelp-page-minor-mode
+         (window (when (eq major-mode 'ghelp-page-mode)
                    (selected-window)))
          (point (point-marker))
          (page nil))
@@ -215,7 +216,7 @@ If NO-PROMPT non-nil, no prompt."
 (defun ghelp-refresh ()
   "Refresh current page."
   (interactive)
-  (if (not ghelp-page-minor-mode)
+  (if (not (eq major-mode 'ghelp-page-mode))
       (user-error "Not in a ghelp buffer.")
     (let* ((symbol ghelp-page--symbol)
            (mode ghelp-page--mode)
@@ -548,7 +549,7 @@ Each entry is a ‘ghelp-entry’.")
 
 ;;;;; Modes
 
-(defvar ghelp-page-minor-mode-map
+(defvar ghelp-page-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "TAB") #'ghelp-toggle-entry)
     (define-key map "q" #'ghelp-close)
@@ -564,15 +565,9 @@ Each entry is a ‘ghelp-entry’.")
     (define-key map "s" #'ghelp-switch-to-page)
     map))
 
-(define-minor-mode ghelp-page-minor-mode
-  ""
-  :lighter ""
-  :keymap 'ghelp-page-minor-mode-map
-  (if ghelp-page-minor-mode
-      (progn
-        ;; (setq header-line-format ghelp-page--header-line-format)
-        (setq buffer-read-only t))
-    (setq buffer-read-only nil)))
+(define-derived-mode ghelp-page-mode fundamental-mode
+  "Ghelp" "Major mode for ghelp pages."
+  (setq buffer-read-only t))
 
 ;;;;; Variables
 
@@ -669,7 +664,7 @@ Each entry is a ‘ghelp-entry’.")
   (with-current-buffer (generate-new-buffer
                         (ghelp--page-name-from mode symbol))
     ;; TODO setup buffer
-    (ghelp-page-minor-mode)
+    (ghelp-page-mode)
     (setq ghelp-page--symbol symbol
           ghelp-page--mode mode)
     (current-buffer)))
