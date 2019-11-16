@@ -561,6 +561,7 @@ Each entry is a ‘ghelp-entry’.")
     (define-key map (kbd "SPC") #'scroll-up-command)
     (define-key map (kbd "<backspace>") #'scroll-down-command)
     (define-key map "g" #'ghelp-refresh)
+    (define-key map "s" #'ghelp-switch-to-page)
     map))
 
 (define-minor-mode ghelp-page-minor-mode

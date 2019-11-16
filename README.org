@@ -39,6 +39,7 @@ Commands you can use:
 | =q=           | close page                     |
 | =<space>=     | scroll down                    |
 | =<backspace>= | scroll up                      |
+| =s=           | search/switch to a page        |
 
 * Customization
 If you want several major modes to share the same set of history and backends (like ~lisp-interaction-mode~ and ~emacs-lisp-mode~), add an entry ~(mode1 . mode2)~ to ~ghelp-mode-share-alist~, and ~mode1~ will share everything of ~mode2~.
