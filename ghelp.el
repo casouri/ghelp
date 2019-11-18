@@ -119,9 +119,10 @@
                               #'ghelp-cl-type-describe-symbol))
     (when (require 'eglot nil t)
       (require 'ghelp-eglot)
-      (ghelp-register-backend 'python-mode
-                              nil
-                              #'ghelp-eglot--describe-symbol))))
+      (dolist (mode ghelp-eglot-supported-modes)
+        (ghelp-register-backend mode
+                                nil
+                                #'ghelp-eglot--describe-symbol)))))
 
 ;;; Etc
 
