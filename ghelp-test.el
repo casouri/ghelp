@@ -12,7 +12,7 @@
 
 (require 'ert)
 
-(ert-deftest history ()
+(ert-deftest ert-test-history ()
   "Create a history, push, jump and find."
   (let* ((modes '(A B C D))
          (symbols '(a b c d))
@@ -46,8 +46,8 @@
     (should (eq 1 (ghelp-history-point history)))
 
     ;; clean up buffers
-    (mapcar (lambda (n) (kill-buffer (ghelp-history-node-buffer n)))
-            nodes)))
+    (dolist (node nodes)
+      (kill-buffer (ghelp-history-node-buffer node)))))
 
 (provide 'ghelp-test)
 
