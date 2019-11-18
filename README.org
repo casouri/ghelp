@@ -24,7 +24,9 @@ Without ~use-package~:
 #+END_SRC
 
 * Usage
-Currently you can bind ~ghelp-describe-symbol~ and ~ghelp-describe-at-point~ to a keybinding you like, or bind ~ghelp-map~.
+Currently you can bind ~ghelp-describe-symbol~ and ~ghelp-describe-at-point~ to a keybinding you like, or bind ~ghelp-map~. To resume to a previous opened page (like ~helm-resume~), use ~ghelp-resume~.
+
+To access Emacs Lisp help regardless of your current major mode, use ~ghelp-describe-as-in-emacs-lisp-mode~ and ~ghelp-resume-as-in-emacs-lisp-mode~.
 
 * In ghelp buffer
 A ghelp buffet is called a page. Each page is made of several entries. Each entry is a self-contained documentation. (For example, you could have a entry for a symbol as a function and another one for it as a variable.)

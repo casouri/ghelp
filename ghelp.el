@@ -80,11 +80,22 @@
     (let ((ghelp--overwrite-mode mode))
       (ghelp-describe-symbol))))
 
+(defun ghelp-resume-as-in (mode)
+  "Return a resume function that thinks it’s in MODE."
+  (lambda () (interactive)
+    (let ((ghelp--overwrite-mode mode))
+      (ghelp-resume))))
+
+(fset 'ghelp-describe-as-in-emacs-lisp-mode (ghelp-describe-as-in 'emacs-lisp-mode))
+(fset 'ghelp-resume-as-in-emacs-lisp-mode (ghelp-resume-as-in 'emacs-lisp-mode))
+
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
                     (define-key map (kbd "C-p") #'ghelp-describe-at-point)
+                    (define-key map "C-r" #'ghelp-resume)
                     (define-key map "h" #'help-command)
-                    (define-key map "e" (ghelp-describe-as-in 'emacs-lisp-mode))
+                    (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
+                    (define-key map "r" #'ghelp-resume-as-in-emacs-lisp-mode)
                     map)
   "Map for ghelp. Bind this map to some entry key sequence.")
 
@@ -154,6 +165,18 @@ If MODE doesn’t point to anything, return itself."
            finally (delete-window)))
 
 ;;; Commands
+
+(defun ghelp-resume ()
+  "Resume to last opened page."
+  (interactive)
+  (let* ((mode (ghelp--resolve-mode (ghelp--mode)))
+         (history (ghelp--get-history mode))
+         (page (ghelp-history--current-page history)))
+    (if page
+        (let ((win (display-buffer page)))
+          (when help-window-select
+            (select-window win)))
+      (user-error "Can’t find a previous page for mode %s" mode))))
 
 (defun ghelp--prompt-for-symbol (default-symbol backends)
   "Prompt user for a symbol and return it.
@@ -272,14 +295,16 @@ If non-nil, use WINDOW to display PAGE."
 ;;
 ;; Functions:
 ;;
-;; - ‘ghelp-history--to-candidates’
 ;; - ‘ghelp--get-history’
+;; - ‘ghelp-history--to-candidates’
 ;; - ‘ghelp-history--goto’
 ;; - ‘ghelp-history--find-and-move’
 ;; - ‘ghelp-history--find’
 ;; - ‘ghelp-history--push’
 ;; - ‘ghelp-history--forward’
 ;; - ‘ghelp-history--back’
+;; - ‘ghelp-history--nth-page’
+;; - ‘ghelp-history--current-page’
 
 (defvar ghelp-history-max-length 50
   "Maximum length of each history.
@@ -315,6 +340,15 @@ If MIN < VAL < MAX, return VAL,
 if VAL <= MIN, return MIN,
 if VAL >= MAX, return MAX."
   (max min (min max val)))
+
+(defun ghelp-history--nth-page (idx history)
+  "Return the IDX’th page of HISTORY."
+  (when-let ((node (nth idx (ghelp-history-nodes history))))
+    (ghelp-history-node-buffer node)))
+
+(defun ghelp-history--current-page (history)
+  "Return the current page of HISTORY."
+  (ghelp-history--nth-page (ghelp-history-point history) history))
 
 (defun ghelp-history--back (history count)
   "Go back COUNT steps in HISTORY, return the corresponding node or nil.
