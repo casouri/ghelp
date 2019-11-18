@@ -58,6 +58,32 @@ to look up Emacs symbols regardless of which major mode you are currently in.
 Each backend is essentially two functions: one returns a list of symbols it knows (or return nil if it can’t), the other returns a list of entries, given informations like symbol or point.
 
 One you have your functions, you can use ~ghelp-register-backend~ to register your backend to a major mode.
+
+** Symbol function
+This function takes no arguments and returns a list of symbols (string) that are available. It is okay if the backend can’t do it - in that case just use nil in place of the function when register the backend.
+
+** Describe function
+This function takes three arguments: ~symbol~, ~buffer~ and ~point~, and returns a *list* of documentation entries. ~symbol~ is the symbol that user is requesting documentation for, ~buffer~ is the buffer where the user invoked the describe function, and ~point~ is the point (a marker) of the symbol. None of the three arguments is guaranteed non-nil, so the backend need to check them before using. And obviously you don’t need to use all of them.
+
+Each returned entries is a list  ~(title text)~, where ~title~ is the title of the entry and ~text~ is the body text of the entry. Normally you can just return ~symbol~, but the backend can also add some more information to it, e.g., ~"symbol (function)"~ to indicate this documentation is for symbol as a function. BTW don’t end title with a newline unless you want a blank line between the title and the body of you entry in the ghelp buffer. ~text~ is a string of the documentation. And it should end with a newline.
+
+Some tips for porting backends:
+1. You can create a temp buffer and return the buffer string.
+2. If your documentation includes buttons, remember to used your describe function with ~ghelp--show-page~ for the button action. And set ~yank-excluded-properties~ to ~nil~ when copying buffer text, otherwise the buttons will be damaged.
+
+You can find the same explanation in the documentation of  ~ghelp-sync-backend~. And remember the return value of the describe function is a *list* of entries.
+
+For some example, see the dummy backend at the bottom of =ghelp.el= and working backends in =ghelp-helpful.el= (example for (hacky) button handling) and =ghelp-eglot.el=.
+
+** Register
+#+BEGIN_SRC emacs-lisp
+(ghelp-register-backend 'major-mode
+                        #'symbol-list-function ; can be nil
+                        #'describe-symbol-function
+                        #'symbol-list-function-for-another-backend ; can be nil
+                        #'describe-symbol-function-for-another-backend)
+#+END_SRC
+
 * Screencasts
 *Eglot*
 
