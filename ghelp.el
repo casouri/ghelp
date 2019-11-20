@@ -822,7 +822,8 @@ FUNCTIONS is a list
 
     (SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN ...)
 
-Each pair of functions corresponds to a backend."
+Each pair of functions corresponds to a backend.
+See ‘ghelp-sync-backend’ for more information on backends."
   (when (oddp (length functions)) (error "FUNCTIONS doesn’t make pairs"))
   (setf (alist-get (ghelp--resolve-mode mode) ghelp-backend-alist)
         (cl-loop for idx from 0 to (1- (length functions)) by 2
@@ -850,6 +851,8 @@ Synchronise backends should implement following methods:
     usually the symbol itself, and TEXT is the documentation
     body. TEXT should end with newline and NAME shouldn’t (unless
     you want extra newline between the title and the body text).
+
+    SYMBOL is a string representing the symbol to be described.
 
     POINT is a marker marking the position of point when user
     called for documentation.
