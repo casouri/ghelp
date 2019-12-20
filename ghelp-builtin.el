@@ -10,14 +10,8 @@
 
 ;;; Face
 
-(defun ghelp-face-describe-symbol (symbol buffer point)
-  "Display the properties of face FACE on FRAME.
-Interactively, FACE defaults to the faces of the character after point
-and FRAME defaults to the selected frame.
-
-If the optional argument FRAME is given, report on face FACE in that frame.
-If FRAME is t, report on the defaults for face FACE (for new frames).
-If FRAME is omitted or nil, use the selected frame."
+(defun ghelp-face-describe-symbol (symbol)
+  "Return an entry."
   (let* ((face (intern-soft symbol))
          (attrs '((:family . "Family")
 		  (:foundry . "Foundry")
@@ -117,18 +111,19 @@ If FRAME is omitted or nil, use the selected frame."
                       (insert "\n")))))
               (terpri)))
           (let ((yank-excluded-properties nil))
-            (list (list symbol (buffer-string)))))))))
+            (list symbol (buffer-string))))))))
 
 ;;; cl-class
 
-(defun ghelp-cl-type-describe-symbol (symbol buffer point)
+(defun ghelp-cl-type-describe-symbol (symbol)
+  "Reqturn an entry."
   (with-temp-buffer
     (let ((standard-output (current-buffer))
           (symbol (intern-soft symbol)))
       (when-let ((class (cl-find-class symbol)))
         (cl--describe-class symbol class)
         (let ((yank-excluded-properties nil))
-          (list (list symbol (buffer-string))))))))
+          (list symbol (buffer-string)))))))
 
 (provide 'ghelp-builtin)
 

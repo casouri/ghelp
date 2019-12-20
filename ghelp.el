@@ -10,7 +10,7 @@
 
 ;; Use these functions:
 
-;; - ‘ghelp-describe-symbol’
+;; - ‘ghelp-describe’
 ;; - ‘ghelp-describe-at-point’
 
 ;;;; Terminology
@@ -19,7 +19,8 @@
 
 ;; - page    :: the buffer displaying documentation
 
-;; - backend :: the backend providing documentation
+;; - backend :: the backend providing documentation. Each major mode
+;;              has one backend
 
 ;; - entry   :: page is made of entries. Each entry is a self-contained
 ;; documentation for the symbol. Each symbol can be
@@ -43,11 +44,9 @@
 
 ;;;; Backends
 
-;; Each backend is essentially two functions: symbol-list and
-;; describe-symbol. ‘symbol-list’ returns a list of symbols and
-;; ‘describe-symbol’, given symbol, buffer and point information, returns
-;; a list of entries to be displayed. Read the docsting of
-;; ‘ghelp-sync-backend’ for more information.
+;; Each major mode has one backend that can be accessed through
+;; ‘ghelp-describe’ function. The backend gets the symbol, finds
+;; the documentation and displays it with ghelp infrastructure.
 
 ;;;; History
 
@@ -77,17 +76,11 @@
 (defun ghelp-describe-as-in (mode)
   "Return a describe function that thinks it’s in MODE."
   (lambda () (interactive)
+    "Describe Emacs Lisp symbol."
     (let ((ghelp--overwrite-mode mode))
-      (ghelp-describe-symbol))))
-
-(defun ghelp-resume-as-in (mode)
-  "Return a resume function that thinks it’s in MODE."
-  (lambda () (interactive)
-    (let ((ghelp--overwrite-mode mode))
-      (ghelp-resume))))
+      (ghelp-describe))))
 
 (fset 'ghelp-describe-as-in-emacs-lisp-mode (ghelp-describe-as-in 'emacs-lisp-mode))
-(fset 'ghelp-resume-as-in-emacs-lisp-mode (ghelp-resume-as-in 'emacs-lisp-mode))
 
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
@@ -107,22 +100,13 @@
       (setq ghelp-backend-alist nil)
     (when (require 'helpful nil t)
       (require 'ghelp-helpful)
-      (require 'ghelp-builtin)
-      (ghelp-register-backend 'emacs-lisp-mode
-                              (lambda () obarray)
-                              #'ghelp-helpful-describe-symbol
-                              ;; this doesn’t matter since faces are
-                              ;; in obarray
-                              nil
-                              #'ghelp-face-describe-symbol
-                              nil
-                              #'ghelp-cl-type-describe-symbol))
+      (setf (alist-get 'emacs-lisp-mode ghelp-backend-alist)
+            #'ghelp-helpful-backend))
     (when (require 'eglot nil t)
       (require 'ghelp-eglot)
       (dolist (mode ghelp-eglot-supported-modes)
-        (ghelp-register-backend mode
-                                nil
-                                #'ghelp-eglot--describe-symbol)))))
+        (setf (alist-get mode ghelp-backend-alist)
+              #'ghelp-eglot-backend)))))
 
 ;;; Etc
 
@@ -152,6 +136,17 @@ If MODE doesn’t point to anything, return itself."
             mode (alist-get mode ghelp-mode-share-alist)))
     prev-mode))
 
+(defvar-local ghelp--overwrite-mode nil
+  "Overwrite ‘major-mode’ with this mode.")
+
+(defun ghelp-get-mode ()
+  "Return major mode for use."
+  (ghelp--resolve-mode
+   (or ghelp--overwrite-mode
+       major-mode)))
+
+;;; Commands
+
 (defun ghelp-close ()
   "Close ghelp buffer."
   (interactive)
@@ -165,12 +160,10 @@ If MODE doesn’t point to anything, return itself."
            and return nil
            finally (delete-window)))
 
-;;; Commands
-
 (defun ghelp-resume ()
   "Resume to last opened page."
   (interactive)
-  (let* ((mode (ghelp--resolve-mode (ghelp--mode)))
+  (let* ((mode (ghelp--resolve-mode (ghelp-get-mode)))
          (history (ghelp--get-history mode))
          (page (ghelp-history--current-page history)))
     (if page
@@ -179,118 +172,37 @@ If MODE doesn’t point to anything, return itself."
             (select-window win)))
       (user-error "Can’t find a previous page for mode %s" mode))))
 
-(defun ghelp--prompt-for-symbol (default-symbol backends)
-  "Prompt user for a symbol and return it.
-DEFAULT-SYMBOL is the default choice, BACKENDS is a list of
-backends used to fetch symbol list."
-  (let* (;; fetch symbol list
-         ;; for some unknown reason, ‘seq-mapcat’ doesn’t work
-         (symbol-lists (remove
-                        nil (mapcar #'ghelp-backend--symbol-list
-                                    backends))))
-    (if (not symbol-lists)
-        default-symbol
-      (let* ((symbol-list (apply (if (vectorp (car symbol-lists))
-                                     #'vconcat #'append)
-                                 symbol-lists))
-             ;; insert default symbol if exists
-             (prompt (format "Describe%s: "
-                             (if default-symbol
-                                 (format " (%s)" default-symbol)
-                               "")))
-             (symbol (completing-read prompt symbol-list))
-             ;; translate "" to default or nil
-             (symbol (if (equal symbol "") default-symbol symbol)))
-        symbol))))
+(defun ghelp-completing-read (default-symbol &rest args)
+  "‘completing-read’ with two improvements.
 
-(defun ghelp-describe-symbol (&optional no-prompt)
+1. Compose prompt with DEFAULT-SYMBOL (string or nil) as
+   “Describe (default DEFAULT-SYMBOL): ”.
+2. If gets empty string, return DEFAULT-SYMBOL.
+
+\(fn DEFAULT-SYMBOL COLLECTION &optional PREDICATE REQUIRE-MATCH INITIAL-INPUT HIST DEF INHERIT-INPUT-METHOD)"
+  (let* ((prompt (format "Describe%s: "
+                         (if default-symbol
+                             (format " (default %s)" default-symbol)
+                           "")))
+         (symbol (apply #'completing-read prompt args)))
+    (if (equal symbol "") default-symbol symbol)))
+
+(defun ghelp-describe (&optional no-prompt)
   "Describe symbol.
 Select PAGE if ‘help-window-select’ is non-nil.
 If NO-PROMPT non-nil, no prompt."
   (interactive)
-  (let* (;; resolve mode translation
-         (mode (if (eq major-mode 'ghelp-page-mode)
-                   ghelp-page--mode
-                 (ghelp--resolve-mode (ghelp--mode))))
-         ;; fetch backends, make sure it’s a list
-         (backend/s (ghelp--get-backend mode))
-         (backends (if (ghelp-sync-backend-p backend/s)
-                       (list backend/s) backend/s))
-         symbol
-         (default-symbol (and (symbol-at-point)
-                              (symbol-name (symbol-at-point))))
-         ;; window we display page in
-         (window (when (eq major-mode 'ghelp-page-mode)
-                   (selected-window)))
-         (point (point-marker))
-         (page nil))
-    (if (not backends)
-        (user-error "No backend for %s" mode)
-      ;; get symbol
-      (setq symbol (if no-prompt default-symbol
-                     (ghelp--prompt-for-symbol default-symbol backends)))
-      (unless symbol (user-error "No symbol at point"))
-      ;; get documentation
-      (setq entry-list (mapcan (lambda (backend)
-                                 (ghelp-backend--describe-symbol
-                                  backend symbol point))
-                               backends))
-      (ghelp--show-page symbol mode point page entry-list window))))
-
-(defun ghelp-refresh ()
-  "Refresh current page."
-  (interactive)
-  (if (not (eq major-mode 'ghelp-page-mode))
-      (user-error "Not in a ghelp buffer.")
-    (let* ((symbol ghelp-page--symbol)
-           (mode ghelp-page--mode)
-           (point ghelp-page--point)
-           (page (current-buffer))
-           (backend/s (ghelp--get-backend mode))
-           (backends (if (ghelp-sync-backend-p backend/s)
-                         (list backend/s)
-                       backend/s))
-           (entry-list (mapcan (lambda (backend)
-                                 (ghelp-backend--describe-symbol
-                                  backend symbol point))
-                               backends)))
-      (ghelp--show-page symbol mode point page entry-list (selected-window)))))
-
-(defun ghelp--show-page (symbol mode point page entry-list &optional window)
-  "Show PAGE w/ SYMBOL at POINT for MODE by displaying ENTRY-LIST.
-Select PAGE if ‘help-window-select’ is non-nil.
-If non-nil, use WINDOW to display PAGE."
-  (if (not entry-list)
-      (message "No documentation for %s" symbol)
-    (setq page (ghelp--get-page-or-create mode symbol point))
-    (ghelp-page--clear page)
-    (dolist (entry entry-list)
-      (ghelp-page--insert-entry entry page t))
-    ;; unfold the last entry
-    (with-current-buffer page
-      (goto-char (point-max))
-      (ghelp-previous-entry)
-      (ghelp-entry-unfold))
-    (if window
-        (window--display-buffer page window 'window)
-      (setq window (display-buffer page)))
-    (when help-window-select
-      (select-window window))))
+  (let* ((mode (ghelp-get-mode))
+         (backend (ghelp--get-backend mode))
+         (page (funcall backend no-prompt))
+         (window (when (derived-mode-p 'ghelp-page-mode)
+                   (selected-window))))
+    (ghelp--show-page page mode window)))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
   (interactive)
-  (ghelp-describe-symbol t))
-
-;; Helpers
-
-(defvar-local ghelp--overwrite-mode nil
-  "Overwrite ‘major-mode’ with this mode.")
-
-(defsubst ghelp--mode ()
-  "Return major mode for use."
-  (or ghelp--overwrite-mode
-      major-mode))
+  (ghelp-describe t))
 
 ;;; History
 ;;
@@ -473,18 +385,9 @@ The symbols are those in HISTORY and can be used for
 ;; - ‘ghelp-next-entry’
 ;; - ‘ghelp-toggle-entry’
 
-
 (defvar-local ghelp--page-entry-list nil
   "A list of documentation entries.
 Each entry is a ‘ghelp-entry’.")
-
-(cl-defstruct ghelp-entry
-  "A documentation entry.
-
- - name :: The title/name of the entry.
- - text :: Text of the documentation."
-  name
-  text)
 
 (defun ghelp-toggle-entry ()
   "Toggle visibility of entry at point."
@@ -574,14 +477,15 @@ Each entry is a ‘ghelp-entry’.")
 
 ;;;; Page
 ;;
-;; - ‘ghelp-page--insert-entry’
-;; - ‘ghelp-page--clear’
-;; - ‘ghelp--get-page-or-create’
+;; - ‘ghelp-page-insert-entry’
+;; - ‘ghelp-page-clear’
+;; - ‘ghelp-get-page-or-create’
 ;; - ‘ghelp-switch-to-page’
 ;; - ‘ghelp-forward’
 ;; - ‘ghelp-back’
 ;; - ‘ghelp-folded-entry’
 ;; - ‘ghelp-entry’
+;; - ‘ghelp--show-page’
 
 ;;;;; Modes
 
@@ -634,9 +538,6 @@ Each entry is a ‘ghelp-entry’.")
 
 (defvar-local ghelp-page--mode nil
   "Mode that was passed to ‘ghelp-describe-symbol’.")
-
-(defvar-local ghelp-page--point nil
-  "Point that was passed to ‘ghelp-describe-symbol’.")
 
 ;; (defvar ghelp-entry-map
 ;;   (let ((map (make-sparse-keymap)))
@@ -705,7 +606,7 @@ Each entry is a ‘ghelp-entry’.")
           ghelp-page--mode mode)
     (current-buffer)))
 
-(defun ghelp--get-page-or-create (mode symbol point)
+(defun ghelp-get-page-or-create (mode symbol)
   "Return the page for MODE (major mode) and SYMBOL.
 Assume a history is avaliable for MODE, else error.
 POINT is the point of the symbol."
@@ -715,42 +616,44 @@ POINT is the point of the symbol."
     (or page
         (prog1 (setq page (ghelp--generate-new-page mode symbol))
           (with-current-buffer page
-            (setq ghelp-page--history history
-                  ghelp-page--point point))
+            (setq ghelp-page--history history))
           (ghelp-history--push page mode symbol history)))))
 
-(defun ghelp-page--clear (page)
+(defun ghelp-page-clear ()
   "Clear PAGE."
-  (with-current-buffer page
-    (let ((inhibit-read-only t))
-      (erase-buffer))))
+  (let ((inhibit-read-only t))
+    (erase-buffer)))
 
-(defun ghelp-page--insert-entry (entry page &optional fold)
+(defun ghelp-page-insert-entry (entry &optional fold)
   "Insert ENTRY at the end of PAGE (buffer) and return the entry.
 
 If FOLD non-nil, fold the entry after insertion."
-  (with-current-buffer page
-    (let ((inhibit-read-only t)
-          (name (ghelp-entry-name entry))
-          (text (ghelp-entry-text entry))
-          ov beg)
-      (save-excursion
-        (goto-char (point-max))
-        ;; this newline therefore is not included in the overlay
-        (insert "\n")
-        (backward-char)
-        (setq beg (point))
-        (insert (propertize (format "%s\n" name) 'face 'ghelp-entry-title)
-                text)
-        (setq ov (make-overlay beg (point)))
-        (overlay-put ov 'ghelp-ov t)
-        (overlay-put ov 'ghelp-entry-name name)
-        (overlay-put ov 'face 'ghelp-entry)
-        ;; FIXME keymap as a symbol doesn’t seem to work
-        ;; keymap property blocks text buttons
-        ;; (overlay-put ov 'keymap ghelp-entry-map)
-        (when fold (ghelp-entry--fold ov))
-        entry))))
+  (let ((inhibit-read-only t)
+        (name (nth 0 entry))
+        (text (nth 1 entry))
+        ov beg)
+    (save-excursion
+      (goto-char (point-max))
+      ;; this newline therefore is not included in the overlay
+      (insert "\n")
+      (backward-char)
+      (setq beg (point))
+      (insert (propertize (format "%s\n" name) 'face 'ghelp-entry-title)
+              text)
+      (setq ov (make-overlay beg (point)))
+      (overlay-put ov 'ghelp-ov t)
+      (overlay-put ov 'ghelp-entry-name name)
+      (overlay-put ov 'face 'ghelp-entry)
+      ;; FIXME keymap as a symbol doesn’t seem to work
+      ;; keymap property blocks text buttons
+      ;; (overlay-put ov 'keymap ghelp-entry-map)
+      (when fold (ghelp-entry--fold ov))
+      entry)))
+
+(defun ghelp-page-insert-entry-list (entry-list &optional fold)
+  "Insert entries in ENTRY-LIST one-by-one, FOLD see ‘ghelp-page-insert-entry’."
+  (dolist (entry entry-list)
+    (ghelp-page-insert-entry entry fold)))
 
 (defun ghelp--overlay-at-point ()
   "Return ghelp overlay at point or nil."
@@ -779,106 +682,64 @@ If FOLD non-nil, fold the entry after insertion."
   (or ghelp-page--history
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
+(defun ghelp--show-page (page mode &optional window)
+  "Display PAGE for MODE, in WINDOW if non-nil."
+  (with-current-buffer page
+    (goto-char
+     (point-max))
+    (ghelp-previous-entry)
+    (ghelp-entry-unfold)
+    (setq-local ghelp-page--mode mode))
+  (if window
+      (window--display-buffer page window 'window)
+    (setq window (display-buffer page)))
+  (when help-window-select
+    (select-window window)))
+
 ;;; Backend
 ;;
 ;; Functions:
 ;;
-;; - ‘ghelp-register-backend’
+;; - ‘ghelp--get-backend’
 
 (defvar ghelp-backend-alist ()
-  "An alist of (major-mode . (backend ...)). ")
+  "An alist of (major-mode . backend).")
 
 (defun ghelp--get-backend (mode)
   "Get ghelp backend by MODE."
-  (alist-get (ghelp--resolve-mode mode) ghelp-backend-alist))
-
-(defun ghelp-backend--symbol-list (backend)
-  "Return the symbol list of BACKEND."
-  (when-let ((fn (ghelp-sync-backend-symbol-list backend)))
-    (funcall fn)))
-
-(defun ghelp-backend--describe-symbol (backend symbol point)
-  "Ask BACKEND for documentation entries for SYMBOL at POINT (marker)."
-  (when-let ((fn (ghelp-sync-backend-describe-symbol backend)))
-    (mapcar (lambda (entry)
-              (when entry
-                (make-ghelp-entry
-                 :name (car entry)
-                 :text (cadr entry))))
-            (condition-case err
-                (funcall fn
-                         (if (symbolp symbol) (symbol-name symbol) symbol)
-                         (marker-buffer point)
-                         point)
-              ((debug error)
-               (message
-                "Ghelp: error occurred in backend function %s: %s"
-                fn (error-message-string err))
-               nil)))))
-
-(defun ghelp-register-backend (mode &rest functions)
-  "Register backends for MODE.
-FUNCTIONS is a list
-
-    (SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN SYMBOL-LIST-FN DESCRIBE-SYMBOL-FN ...)
-
-Each pair of functions corresponds to a backend.
-See ‘ghelp-sync-backend’ for more information on backends."
-  (when (oddp (length functions)) (error "FUNCTIONS doesn’t make pairs"))
-  (setf (alist-get (ghelp--resolve-mode mode) ghelp-backend-alist)
-        (cl-loop for idx from 0 to (1- (length functions)) by 2
-                 for symbol-list = (nth idx functions)
-                 for describe-fn = (nth (1+ idx) functions)
-                 collect (make-ghelp-sync-backend :symbol-list symbol-list
-                                                  :describe-symbol describe-fn))))
-
-(cl-defstruct ghelp-sync-backend
-  "Template backend for all synchronise ghelp backends.
-
-Synchronise backends should implement following methods:
-
- - symbol-list (optional)
- - describe-symbol
-
- - symbol-list :: (lambda () ...)
-    Return the symbol list for that backend.
-
- - describe-symbol :: (lambda (symbol buffer point) ...)
-    Describe SYMBOL.
-
-    Backend should return a list of “entries”. Each entry looks
-    like (name text), where NAME is the title of the entry,
-    usually the symbol itself, and TEXT is the documentation
-    body. TEXT should end with newline and NAME shouldn’t (unless
-    you want extra newline between the title and the body text).
-
-    SYMBOL is a string representing the symbol to be described.
-
-    POINT is a marker marking the position of point when user
-    called for documentation.
-
-    BUFFER is the buffer where the point is in.
-
-    BUFFER and POINT are NOT garanteed to be non-nil. That is,
-    they may not be avaliable for the backend."
-  (symbol-list nil)
-  (describe-symbol nil))
+  (alist-get mode ghelp-backend-alist))
 
 ;;; Dummy
 
-(defun ghelp-dummy-symbol-list ()
-  ""
-  '("woome" "veemo" "love" "and" "peace" "many"))
-
-(defun ghelp-dummy-describe-symbol (symbol _ _)
-  ""
-  (pcase symbol
-    ("woome" '(("Woome" "Woome!\n")))
-    ("veemo" '(("Veemo" "Veemo!\n")))
-    ("love" '(("Love" "Love is good.\n")))
-    ("and" '(("And" "And is a conjunction.\n")))
-    ("peace" '(("Peace" "もう大丈夫だ！なぜって？私が来た！\n")))
-    ("many" '(("Many1" "I’m ONE.\n") ("Many2" "I’m TWO.\n")))))
+(defun ghelp-dummy-backend (&optional no-prompt)
+  "Demo. No prompt if NO-PROMPT non-nil."
+  (let* ((buffer (current-buffer))
+         (default-symbol (symbol-at-point))
+         ;; get symbol from user
+         (symbol (if no-prompt
+                     default-symbol
+                   (ghelp-completing-read ; I can also use ‘completing-read’
+                    default-symbol
+                    '("woome" "veemo" "love" "and" "peace" "many"))))
+         ;; get documentation
+         ;; each entry is (TITLE CONTENT)
+         (entry-list (pcase symbol
+                       ("woome" '(("Woome" "Woome!\n")))
+                       ("veemo" '(("Veemo" "Veemo!\n")))
+                       ("love" '(("Love" "Love is good.\n")))
+                       ("and" '(("And" "And is a conjunction.\n")))
+                       ("peace" '(("Peace" "もう大丈夫だ！なぜって？私が来た！\n")))
+                       ("many" '(("Many1" "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
+    ;; ‘dummy-mode’ is the major mode this backend is tied to
+    (with-current-buffer (ghelp-get-page-or-create 'dummy-mode symbol)
+      ;; erase old content
+      (ghelp-page-clear)
+      ;; insert new content
+      (ghelp-page-insert-entry-list entry-list t)
+      ;; set some local variable
+      (setq-local dummy--original-buffer buffer)
+      ;; return page
+      (current-buffer))))
 
 (provide 'ghelp)
 

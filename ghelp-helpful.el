@@ -9,24 +9,43 @@
 ;;
 
 (require 'helpful)
+(require 'ghelp-builtin)
 
 ;;; New code
 ;;
 ;; The BUFFER that is passed around to ‘ghelp-helpful--buffer’
 ;; could be nil
 
-(defun ghelp-helpful-describe-symbol (symbol buffer point)
-  (let* ((buffer (or buffer (and point (marker-buffer point))))
-         (symbol (intern-soft symbol))
+(defun ghelp-helpful-backend (&optional no-prompt)
+  (let* ((buffer (current-buffer))
+         (mode (ghelp-get-mode))
+         (default-symbol (symbol-at-point))
+         (symbol (intern-soft
+                  (if no-prompt
+                      default-symbol
+                    (ghelp-completing-read ; I can also use ‘completing-read’
+                     default-symbol
+                     obarray
+                     (lambda (s) (let ((s (intern-soft s)))
+                                   (or (fboundp s)
+                                       (boundp s)
+                                       (facep s)
+                                       (cl--class-p s))))))))
          (callable-doc (ghelp-helpful-callable symbol buffer))
-         (variable-doc (ghelp-helpful-variable symbol buffer)))
-    (remove
-     nil
-     (list
-      (when callable-doc (list (format "%s (callable)" symbol)
-                               callable-doc))
-      (when variable-doc (list (format "%s (variable)" symbol)
-                               variable-doc))))))
+         (variable-doc (ghelp-helpful-variable symbol buffer))
+         (entry-list (remove
+                      nil
+                      (list
+                       (when callable-doc
+                         (list (format "%s (callable)" symbol) callable-doc))
+                       (when variable-doc
+                         (list (format "%s (variable)" symbol) variable-doc))
+                       (ghelp-face-describe-symbol symbol)
+                       (ghelp-cl-type-describe-symbol symbol)))))
+    (with-current-buffer (ghelp-get-page-or-create mode symbol)
+      (ghelp-page-clear)
+      (ghelp-page-insert-entry-list entry-list t)
+      (current-buffer))))
 
 (defun ghelp-helpful-callable (symbol buffer)
   (when (fboundp symbol)
