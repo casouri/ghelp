@@ -46,7 +46,7 @@
 
 ;; Each major mode has one backend that can be accessed through
 ;; ‘ghelp-describe’ function. The backend gets the symbol, finds
-;; the documentation and displays it with ghelp infrastructure.
+;; the documentation and returns the symbol and documentation.
 
 ;;;; History
 
@@ -141,9 +141,10 @@ If MODE doesn’t point to anything, return itself."
 
 (defun ghelp-get-mode ()
   "Return major mode for use."
-  (ghelp--resolve-mode
-   (or ghelp--overwrite-mode
-       major-mode)))
+  (or ghelp-page--mode
+      (ghelp--resolve-mode
+       (or ghelp--overwrite-mode
+           major-mode))))
 
 ;;; Commands
 
@@ -172,6 +173,11 @@ If MODE doesn’t point to anything, return itself."
             (select-window win)))
       (user-error "Can’t find a previous page for mode %s" mode))))
 
+(defun ghelp-refresh ()
+  "Refresh current page."
+  (interactive)
+  (ghelp-describe nil t))
+
 (defun ghelp-completing-read (default-symbol &rest args)
   "‘completing-read’ with two improvements.
 
@@ -187,17 +193,24 @@ If MODE doesn’t point to anything, return itself."
          (symbol (apply #'completing-read prompt args)))
     (if (equal symbol "") default-symbol symbol)))
 
-(defun ghelp-describe (&optional no-prompt)
+(defun ghelp-describe (&optional no-prompt refresh)
   "Describe symbol.
-Select PAGE if ‘help-window-select’ is non-nil.
-If NO-PROMPT non-nil, no prompt."
+
+Select PAGE if ‘help-window-select’ is non-nil. If NO-PROMPT
+non-nil, no prompt. If REFRESH is non-nil, refresh instead."
   (interactive)
   (let* ((mode (ghelp-get-mode))
          (backend (ghelp--get-backend mode))
-         (page (funcall backend no-prompt))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
-    (ghelp--show-page page mode window)))
+    (pcase-let* ((`(,symbol ,entry-list ,store) (funcall backend no-prompt refresh))
+                 (page (ghelp-get-page-or-create symbol mode)))
+      (with-current-buffer page
+        (ghelp-page-clear)
+        (ghelp-page-insert-entry-list entry-list t)
+        (pcase-dolist (`(,key ,value) store)
+          (ghelp-page-store-set key value)))
+      (ghelp--show-page page mode window))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -373,9 +386,7 @@ The symbols are those in HISTORY and can be used for
   (cl-loop for node in (ghelp-history-nodes history)
            collect (ghelp-history-node-symbol node)))
 
-;;; Display
-
-;;;; Entry
+;;; Entry
 ;;
 ;; Functions:
 ;;
@@ -475,7 +486,7 @@ Each entry is a ‘ghelp-entry’.")
   (overlay-put overlay 'display nil)
   (overlay-put overlay 'face 'ghelp-entry))
 
-;;;; Page
+;;; Page
 ;;
 ;; - ‘ghelp-page-insert-entry’
 ;; - ‘ghelp-page-clear’
@@ -486,6 +497,8 @@ Each entry is a ‘ghelp-entry’.")
 ;; - ‘ghelp-folded-entry’
 ;; - ‘ghelp-entry’
 ;; - ‘ghelp--show-page’
+;; - ‘ghelp-page-store-get’
+;; - ‘ghelp-page-store-set’
 
 ;;;;; Modes
 
@@ -533,9 +546,6 @@ Each entry is a ‘ghelp-entry’.")
 (defvar-local ghelp-page--history nil
   "A pointer point back to the history containing this page.")
 
-(defvar-local ghelp-page--symbol nil
-  "The symbol that this page is describing.")
-
 (defvar-local ghelp-page--mode nil
   "Mode that was passed to ‘ghelp-describe-symbol’.")
 
@@ -567,6 +577,9 @@ Each entry is a ‘ghelp-entry’.")
                  face info-header-node
                  mouse-face highlight)))))
   "Setup current page’s header line.")
+
+(defvar-local ghelp-page--store nil
+  "Store information in page. An alist.")
 
 ;;;;; Commands
 
@@ -696,6 +709,14 @@ If FOLD non-nil, fold the entry after insertion."
   (when help-window-select
     (select-window window)))
 
+(defun ghelp-page-store-set (key value)
+  "Set KEY VALUE pair in PAGE store."
+  (setf (alist-get key ghelp-page--store) value))
+
+(defun ghelp-page-store-get (key)
+  "Get KEY from PAGE’s store."
+  (alist-get key ghelp-page--store))
+
 ;;; Backend
 ;;
 ;; Functions:
@@ -711,35 +732,31 @@ If FOLD non-nil, fold the entry after insertion."
 
 ;;; Dummy
 
-(defun ghelp-dummy-backend (&optional no-prompt)
-  "Demo. No prompt if NO-PROMPT non-nil."
-  (let* ((buffer (current-buffer))
-         (default-symbol (symbol-at-point))
-         ;; get symbol from user
-         (symbol (if no-prompt
-                     default-symbol
-                   (ghelp-completing-read ; I can also use ‘completing-read’
-                    default-symbol
-                    '("woome" "veemo" "love" "and" "peace" "many"))))
+(defun ghelp-dummy-backend (&optional no-prompt refresh)
+  "Demo. No prompt if NO-PROMPT is non-nil. Refresh page if REFRESH is non-nil."
+  (let* ((default-symbol (symbol-at-point))
+         (symbol (if refresh
+                     ;; we are refreshing a page, use the pre-saved symbol
+                     (ghelp-page-store-get 'refresh-symbol)
+                   ;; get symbol from user, I don’t have to make a prompt though
+                   (if no-prompt
+                       default-symbol
+                     (ghelp-completing-read ; I can also use ‘completing-read’
+                      default-symbol
+                      '("woome" "veemo" "love" "and" "peace" "many")))))
          ;; get documentation
-         ;; each entry is (TITLE CONTENT)
          (entry-list (pcase symbol
-                       ("woome" '(("Woome" "Woome!\n")))
-                       ("veemo" '(("Veemo" "Veemo!\n")))
-                       ("love" '(("Love" "Love is good.\n")))
-                       ("and" '(("And" "And is a conjunction.\n")))
-                       ("peace" '(("Peace" "もう大丈夫だ！なぜって？私が来た！\n")))
-                       ("many" '(("Many1" "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    ;; ‘dummy-mode’ is the major mode this backend is tied to
-    (with-current-buffer (ghelp-get-page-or-create 'dummy-mode symbol)
-      ;; erase old content
-      (ghelp-page-clear)
-      ;; insert new content
-      (ghelp-page-insert-entry-list entry-list t)
-      ;; set some local variable
-      (setq-local dummy--original-buffer buffer)
-      ;; return page
-      (current-buffer))))
+                       ;;           title   documentation
+                       ("woome" '(("Woome"  "Woome!\n")))
+                       ("veemo" '(("Veemo"  "Veemo!\n")))
+                       ("love"  '(("Love"   "Love is good.\n")))
+                       ("and"   '(("And"    "And is a conjunction.\n")))
+                       ("peace" '(("Peace"  "もう大丈夫だ！なぜって？私が来た！\n")))
+                       ;; multiple entries
+                       ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
+    ;; return to ghelp, we store (refresh-symbol symbol) into the
+    ;; store, so we can later get it by ‘ghelp-page-store-get’.
+    (list symbol entry-list `((refresh-symbol ,symbol)))))
 
 (provide 'ghelp)
 

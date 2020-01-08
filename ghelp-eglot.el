@@ -17,9 +17,14 @@
                                           (setq list (append (car cell) list)))))
   "A list of major modes that are supported by eglot.")
 
-(defun ghelp-eglot-backend (&optional no-prompt)
+(defun ghelp-eglot-backend (&optional no-prompt refresh)
   (when eglot--managed-mode
-    (let* ((symbol (symbol-name (symbol-at-point)))
+    (let* ((marker (point-marker))
+           (symbol (if refresh (save-excursion
+                                 (goto-char
+                                  (ghelp-page-store-get 'refresh-marker))
+                                 (symbol-at-point))
+                     (symbol-name (symbol-at-point))))
            (mode (ghelp-get-mode))
            (doc (catch 'ret
                   (eglot--dbind
@@ -29,10 +34,9 @@
                     (when (seq-empty-p contents) (throw 'ret nil))
                     (concat (eglot--hover-info contents range) "\n")))))
       (when doc
-        (with-current-buffer (ghelp-get-page-or-create mode symbol)
-          (ghelp-page-clear)
-          (ghelp-page-insert-entry (list symbol doc))
-          (current-buffer))))))
+        (list symbol
+              `((,symbol ,doc))
+              `((refresh-marker ,marker)))))))
 
 
 
