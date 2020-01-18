@@ -111,15 +111,15 @@
   (let* ((sym (button-get button 'symbol))
          (doc-v (ghelp-helpful-variable sym nil))
          (doc-f (ghelp-helpful-callable sym nil))
-         (ev (when doc-v (make-ghelp-entry
-                          :name (format "%s (variable)" sym)
-                          :text doc-v)))
-         (ef (when doc-f (make-ghelp-entry
-                          :name (format "%s (callable)" sym)
-                          :text doc-f)))
+         (ev (when doc-v (list
+                          (format "%s (variable)" sym)
+                          doc-v)))
+         (ef (when doc-f (list
+                          (format "%s (callable)" sym)
+                          doc-f)))
          (entry-list (remove nil (list ev ef))))
-    (ghelp--show-page sym ghelp-page--mode nil nil
-                      entry-list (selected-window))))
+    (ghelp--show-page sym entry-list nil ghelp-page--mode
+                      (selected-window))))
 
 (define-button-type 'ghelp-helpful-describe-exactly-button
   'action #'ghelp-helpful--describe-exactly

@@ -203,14 +203,9 @@ non-nil, no prompt. If REFRESH is non-nil, refresh instead."
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
-    (pcase-let* ((`(,symbol ,entry-list ,store) (funcall backend no-prompt refresh))
-                 (page (ghelp-get-page-or-create symbol mode)))
-      (with-current-buffer page
-        (ghelp-page-clear)
-        (ghelp-page-insert-entry-list entry-list t)
-        (pcase-dolist (`(,key ,value) store)
-          (ghelp-page-store-set key value)))
-      (ghelp--show-page page mode window))))
+    (pcase-let* ((`(,symbol ,entry-list ,store)
+                  (funcall backend no-prompt refresh)))
+      (ghelp--show-page symbol entry-list store mode window))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -695,19 +690,24 @@ If FOLD non-nil, fold the entry after insertion."
   (or ghelp-page--history
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
-(defun ghelp--show-page (page mode &optional window)
-  "Display PAGE for MODE, in WINDOW if non-nil."
-  (with-current-buffer page
-    (goto-char
-     (point-max))
-    (ghelp-previous-entry)
-    (ghelp-entry-unfold)
-    (setq-local ghelp-page--mode mode))
-  (if window
-      (window--display-buffer page window 'window)
-    (setq window (display-buffer page)))
-  (when help-window-select
-    (select-window window)))
+(defun ghelp--show-page (symbol entry-list store mode &optional window)
+  "Display page for SYMBOL with ENTRY-LIST & STORE in MODE, in WINDOW if non-nil."
+  (let ((page (ghelp-get-page-or-create symbol mode)))
+    (with-current-buffer page
+      (ghelp-page-clear)
+      (ghelp-page-insert-entry-list entry-list t)
+      (pcase-dolist (`(,key ,value) store)
+        (ghelp-page-store-set key value))
+      (goto-char
+       (point-max))
+      (ghelp-previous-entry)
+      (ghelp-entry-unfold)
+      (setq-local ghelp-page--mode mode))
+    (if window
+        (window--display-buffer page window 'window)
+      (setq window (display-buffer page)))
+    (when help-window-select
+      (select-window window))))
 
 (defun ghelp-page-store-set (key value)
   "Set KEY VALUE pair in PAGE store."
