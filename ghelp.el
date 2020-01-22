@@ -692,7 +692,7 @@ If FOLD non-nil, fold the entry after insertion."
 
 (defun ghelp--show-page (symbol entry-list store mode &optional window)
   "Display page for SYMBOL with ENTRY-LIST & STORE in MODE, in WINDOW if non-nil."
-  (let ((page (ghelp-get-page-or-create symbol mode)))
+  (let ((page (ghelp-get-page-or-create mode symbol)))
     (with-current-buffer page
       (ghelp-page-clear)
       (ghelp-page-insert-entry-list entry-list t)
