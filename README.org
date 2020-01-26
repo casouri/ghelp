@@ -90,7 +90,7 @@ If SYMBOL non-nil, just describe it, otherwise get a symbol by prompting or gues
 
 Register your backend by
 #+BEGIN_SRC emacs-lisp
-(setf (alist-get 'mode ghelp-backend-alist) #'your-backend)
+(ghelp-register-backend 'major-mode #'your-backend-function)
 #+END_SRC
 
 * Screencasts

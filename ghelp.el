@@ -100,13 +100,11 @@
       (setq ghelp-backend-alist nil)
     (when (require 'helpful nil t)
       (require 'ghelp-helpful)
-      (setf (alist-get 'emacs-lisp-mode ghelp-backend-alist)
-            #'ghelp-helpful-backend))
+      (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
     (when (require 'eglot nil t)
       (require 'ghelp-eglot)
-      (dolist (mode ghelp-eglot-supported-modes)
-        (setf (alist-get mode ghelp-backend-alist)
-              #'ghelp-eglot-backend)))))
+      (ghelp-register-backend ghelp-eglot-supported-modes
+                              #'ghelp-eglot-backend))))
 
 ;;; Etc
 
@@ -734,6 +732,16 @@ If FOLD non-nil, fold the entry after insertion."
 (defun ghelp--get-backend (mode)
   "Get ghelp backend by MODE."
   (alist-get mode ghelp-backend-alist))
+
+(defun ghelp-register-backend (mode backend-function)
+  "Register BACKEND-FUNCTION for each MODE.
+MODE can be a major mode symbol or a list of it."
+  (cond ((symbolp mode)
+         (setf (alist-get mode ghelp-backend-alist) backend-function))
+        ((consp mode)
+         (dolist (mode1 mode)
+           (setf (alist-get mode1 ghelp-backend-alist) backend-function)))
+        (t (error "MODE should be either a list or a symbol"))))
 
 ;;; Dummy
 
