@@ -495,6 +495,8 @@ Each entry is a ‘ghelp-entry’.")
 ;; - ‘ghelp--show-page’
 ;; - ‘ghelp-page-store-get’
 ;; - ‘ghelp-page-store-set’
+;; - ‘ghelp-page--mode’
+;; - ‘ghelp-page--symbol’
 
 ;;;;; Modes
 
