@@ -11,14 +11,8 @@
 (require 'helpful)
 (require 'ghelp-builtin)
 
-;;; New code
-;;
-;; The BUFFER that is passed around to ‘ghelp-helpful--buffer’
-;; could be nil
-
 (defun ghelp-helpful-backend (&optional no-prompt refresh)
-  (let* ((buffer (current-buffer))
-         (mode (ghelp-get-mode))
+  (let* ((mode (ghelp-get-mode))
          (default-symbol (symbol-at-point))
          (symbol (intern-soft
                   (if refresh
@@ -33,8 +27,8 @@
                                          (boundp s)
                                          (facep s)
                                          (cl--class-p s)))))))))
-         (callable-doc (ghelp-helpful-callable symbol buffer))
-         (variable-doc (ghelp-helpful-variable symbol buffer))
+         (callable-doc (ghelp-helpful-callable symbol))
+         (variable-doc (ghelp-helpful-variable symbol))
          (entry-list (remove
                       nil
                       (list
@@ -48,9 +42,9 @@
           entry-list
           `((refresh-symbol ,symbol)))))
 
-(defun ghelp-helpful-callable (symbol buffer)
+(defun ghelp-helpful-callable (symbol)
   (when (fboundp symbol)
-    (let ((buf (ghelp-helpful--buffer symbol t buffer)))
+    (let ((buf (helpful--buffer symbol t)))
       (with-current-buffer buf
         ;; use our hacked ‘helpful--button’ to insert
         ;; hacked describe buttons
@@ -64,9 +58,9 @@
         (prog1 (buffer-string)
           (kill-buffer buf))))))
 
-(defun ghelp-helpful-variable (symbol buffer)
+(defun ghelp-helpful-variable (symbol)
   (when (helpful--variable-p symbol)
-    (let ((buf (ghelp-helpful--buffer symbol nil buffer)))
+    (let ((buf (helpful--buffer symbol nil)))
       (with-current-buffer buf
         ;; use our hacked ‘helpful--button’ to insert
         ;; hacked describe buttons
@@ -145,47 +139,6 @@ whether the symbol represents a variable or a callable."
         (entry-list (list (if callable-p ef ev))))
     (ghelp--show-page sym ghelp-page--mode nil nil
                       entry-list (selected-window))))
-
-(defun ghelp-helpful--buffer (symbol callable-p buffer)
-  ;; I added the BUFFER parameter - Yuan
-  "Return a buffer to show help for SYMBOL in."
-  (let* ((current-buffer buffer)
-         (buf-name
-          (format "*helpful %s*"
-                  (if (symbolp symbol)
-                      (format "%s: %s"
-                              (helpful--kind-name symbol callable-p)
-                              symbol)
-                    "lambda")))
-         (buf (get-buffer buf-name)))
-    (unless buf
-      ;; If we need to create the buffer, ensure we don't exceed
-      ;; `helpful-max-buffers' by killing the least recently used.
-      (when (numberp helpful-max-buffers)
-        (let* ((buffers (buffer-list))
-               (helpful-bufs (--filter (with-current-buffer it
-                                         (eq major-mode 'helpful-mode))
-                                       buffers))
-               ;; `buffer-list' seems to be ordered by most recently
-               ;; visited first, so keep those.
-               (excess-buffers (-drop (1- helpful-max-buffers) helpful-bufs)))
-          ;; Kill buffers so we have one buffer less than the maximum
-          ;; before we create a new one.
-          (-each excess-buffers #'kill-buffer)))
-
-      (setq buf (get-buffer-create buf-name)))
-
-    ;; Initialise the buffer with the symbol and associated data.
-    (with-current-buffer buf
-      (helpful-mode)
-      (setq helpful--sym symbol)
-      (setq helpful--callable-p callable-p)
-      (setq helpful--start-buffer current-buffer)
-      (setq helpful--associated-buffer current-buffer)
-      (if (helpful--primitive-p symbol callable-p)
-          (setq-local comment-start "//")
-        (setq-local comment-start ";")))
-    buf))
 
 (provide 'ghelp-helpful)
 
