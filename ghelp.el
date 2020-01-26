@@ -73,14 +73,17 @@
 
 ;;; Global
 
-(defun ghelp-describe-as-in (mode)
-  "Return a describe function that thinks it’s in MODE."
-  (lambda () (interactive)
-    "Describe Emacs Lisp symbol."
-    (let ((ghelp--overwrite-mode mode))
-      (ghelp-describe))))
+(defun ghelp-describe-as-in (mode &rest args)
+  "Return a describe function that thinks it’s in MODE.
+ARGS is passed to ‘describe-function’."
+  (let ((ghelp--overwrite-mode mode))
+    (ignore ghelp--overwrite-mode)
+    (apply #'ghelp-describe args)))
 
-(fset 'ghelp-describe-as-in-emacs-lisp-mode (ghelp-describe-as-in 'emacs-lisp-mode))
+(defun ghelp-describe-as-in-emacs-lisp-mode (&rest args)
+  "Describe as if in ‘emacs-lisp-mode’, ARGS is passed to ‘describe-function’."
+  (interactive)
+  (apply #'ghelp-describe-as-in 'emacs-lisp-mode args))
 
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
@@ -88,7 +91,6 @@
                     (define-key map "C-r" #'ghelp-resume)
                     (define-key map "h" #'help-command)
                     (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
-                    (define-key map "r" #'ghelp-resume-as-in-emacs-lisp-mode)
                     map)
   "Map for ghelp. Bind this map to some entry key sequence.")
 
