@@ -11,22 +11,21 @@
 (require 'helpful)
 (require 'ghelp-builtin)
 
-(defun ghelp-helpful-backend (&optional no-prompt refresh)
+(defun ghelp-helpful-backend (&optional no-prompt symbol)
   (let* ((mode (ghelp-get-mode))
          (default-symbol (symbol-at-point))
          (symbol (intern-soft
-                  (if refresh
-                      (ghelp-page-store-get 'refresh-symbol)
-                    (if no-prompt
-                        default-symbol
-                      (ghelp-completing-read ; I can also use ‘completing-read’
-                       default-symbol
-                       obarray
-                       (lambda (s) (let ((s (intern-soft s)))
-                                     (or (fboundp s)
-                                         (boundp s)
-                                         (facep s)
-                                         (cl--class-p s)))))))))
+                  (or symbol
+                      (if no-prompt
+                          default-symbol
+                        (ghelp-completing-read ; I can also use ‘completing-read’
+                         default-symbol
+                         obarray
+                         (lambda (s) (let ((s (intern-soft s)))
+                                       (or (fboundp s)
+                                           (boundp s)
+                                           (facep s)
+                                           (cl--class-p s)))))))))
          (callable-doc (ghelp-helpful-callable symbol))
          (variable-doc (ghelp-helpful-variable symbol))
          (entry-list (remove
@@ -38,9 +37,7 @@
                          (list (format "%s (variable)" symbol) variable-doc))
                        (ghelp-face-describe-symbol symbol)
                        (ghelp-cl-type-describe-symbol symbol)))))
-    (list symbol
-          entry-list
-          `((refresh-symbol ,symbol)))))
+    (list symbol entry-list)))
 
 (defun ghelp-helpful-callable (symbol)
   (when (fboundp symbol)

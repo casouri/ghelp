@@ -176,7 +176,7 @@ If MODE doesn’t point to anything, return itself."
 (defun ghelp-refresh ()
   "Refresh current page."
   (interactive)
-  (ghelp-describe nil t))
+  (ghelp-describe t ghelp-page--symbol))
 
 (defun ghelp-completing-read (default-symbol &rest args)
   "‘completing-read’ with two improvements.
@@ -193,18 +193,19 @@ If MODE doesn’t point to anything, return itself."
          (symbol (apply #'completing-read prompt args)))
     (if (equal symbol "") default-symbol symbol)))
 
-(defun ghelp-describe (&optional no-prompt refresh)
+(defun ghelp-describe (&optional no-prompt symbol)
   "Describe symbol.
 
 Select PAGE if ‘help-window-select’ is non-nil. If NO-PROMPT
-non-nil, no prompt. If REFRESH is non-nil, refresh instead."
+non-nil, no prompt. If SYMBOL is non-nil, describe SYMBOL.
+SYMBOL is intended for internal use."
   (interactive)
   (let* ((mode (ghelp-get-mode))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
     (pcase-let* ((`(,symbol ,entry-list ,store)
-                  (funcall backend no-prompt refresh)))
+                  (funcall backend no-prompt symbol)))
       (ghelp--show-page symbol entry-list store mode window))))
 
 (defun ghelp-describe-at-point ()
@@ -542,7 +543,10 @@ Each entry is a ‘ghelp-entry’.")
   "A pointer point back to the history containing this page.")
 
 (defvar-local ghelp-page--mode nil
-  "Mode that was passed to ‘ghelp-describe-symbol’.")
+  "Mode that was passed to ‘ghelp-show-page’.")
+
+(defvar-local ghelp-page--symbol nil
+  "Symbol that was passed to ‘ghelp--show-page’.")
 
 ;; (defvar ghelp-entry-map
 ;;   (let ((map (make-sparse-keymap)))
@@ -702,7 +706,8 @@ If FOLD non-nil, fold the entry after insertion."
        (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold)
-      (setq-local ghelp-page--mode mode))
+      (setq-local ghelp-page--mode mode)
+      (setq-local ghelp-page--symbol symbol))
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
@@ -732,18 +737,19 @@ If FOLD non-nil, fold the entry after insertion."
 
 ;;; Dummy
 
-(defun ghelp-dummy-backend (&optional no-prompt refresh)
-  "Demo. No prompt if NO-PROMPT is non-nil. Refresh page if REFRESH is non-nil."
+(defun ghelp-dummy-backend (&optional no-prompt symbol)
+  "Demo. No prompt if NO-PROMPT is non-nil.
+If SYMBOL non-nil, just describe it, otherwise get a symbol by prompting or guessing."
   (let* ((default-symbol (symbol-at-point))
-         (symbol (if refresh
-                     ;; we are refreshing a page, use the pre-saved symbol
-                     (ghelp-page-store-get 'refresh-symbol)
-                   ;; get symbol from user, I don’t have to make a prompt though
-                   (if no-prompt
-                       default-symbol
-                     (ghelp-completing-read ; I can also use ‘completing-read’
-                      default-symbol
-                      '("woome" "veemo" "love" "and" "peace" "many")))))
+         (symbol (or symbol
+                     ;; get symbol from user, I don’t have to make a prompt though
+                     (if no-prompt
+                         default-symbol
+                       (ghelp-completing-read ; I can also use ‘completing-read’
+                        default-symbol
+                        '("woome" "veemo" "love" "and" "peace" "many")))))
+         ;; just to demo a usage of ‘store’
+         (ghelp-page-store-get 'my-var) ; = "cool"
          ;; get documentation
          (entry-list (pcase symbol
                        ;;           title   documentation
@@ -754,9 +760,8 @@ If FOLD non-nil, fold the entry after insertion."
                        ("peace" '(("Peace"  "もう大丈夫だ！なぜって？私が来た！\n")))
                        ;; multiple entries
                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    ;; return to ghelp, we store (refresh-symbol symbol) into the
-    ;; store, so we can later get it by ‘ghelp-page-store-get’.
-    (list symbol entry-list `((refresh-symbol ,symbol)))))
+    ;; store some value for later use
+    (list symbol entry-list `((my-var "cool")))))
 
 (provide 'ghelp)
 

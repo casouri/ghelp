@@ -61,18 +61,19 @@ Each major mode is tied to one backend. Each backend is a function that does all
 
 Below is an example backend that gets symbol and documentation and returns them.
 #+BEGIN_SRC emacs-lisp
-(defun ghelp-dummy-backend (&optional no-prompt refresh)
-  "Demo. No prompt if NO-PROMPT is non-nil. Refresh page if REFRESH is non-nil."
+(defun ghelp-dummy-backend (&optional no-prompt symbol)
+  "Demo. No prompt if NO-PROMPT is non-nil.
+If SYMBOL non-nil, just describe it, otherwise get a symbol by prompting or guessing."
   (let* ((default-symbol (symbol-at-point))
-         (symbol (if refresh
-                     ;; we are refreshing a page, use the pre-saved symbol
-                     (ghelp-page-store-get 'refresh-symbol)
-                   ;; get symbol from user, I don’t have to make a prompt though
-                   (if no-prompt
-                       default-symbol
-                     (ghelp-completing-read ; I can also use ‘completing-read’
-                      default-symbol
-                      '("woome" "veemo" "love" "and" "peace" "many")))))
+         (symbol (or symbol
+                     ;; get symbol from user, I don’t have to make a prompt though
+                     (if no-prompt
+                         default-symbol
+                       (ghelp-completing-read ; I can also use ‘completing-read’
+                        default-symbol
+                        '("woome" "veemo" "love" "and" "peace" "many")))))
+         ;; just to demo a usage of ‘store’
+         (ghelp-page-store-get 'my-var) ; = "cool"
          ;; get documentation
          (entry-list (pcase symbol
                        ;;           title   documentation
@@ -83,9 +84,8 @@ Below is an example backend that gets symbol and documentation and returns them.
                        ("peace" '(("Peace"  "もう大丈夫だ！なぜって？私が来た！\n")))
                        ;; multiple entries
                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    ;; return to ghelp, we store (refresh-symbol symbol) into the
-    ;; store, so we can later get it by ‘ghelp-page-store-get’.
-    (list symbol entry-list `((refresh-symbol ,symbol)))))
+    ;; store some value for later use
+    (list symbol entry-list `((my-var "cool")))))
 #+END_SRC
 
 Register your backend by
