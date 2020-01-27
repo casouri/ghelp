@@ -751,7 +751,10 @@ MODE can be a major mode symbol or a list of it."
 
 (defun ghelp-dummy-backend (&optional no-prompt symbol)
   "Demo. No prompt if NO-PROMPT is non-nil.
-If SYMBOL non-nil, just describe it, otherwise get a symbol by prompting or guessing."
+If SYMBOL non-nil, just describe it, otherwise get a symbol by
+prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
+is a string, and ENTRY-LIST is a list (ENTRY ...), where each
+ENTRY is (TITLE DOC)."
   (let* ((default-symbol (symbol-at-point))
          (symbol (or symbol
                      ;; get symbol from user, I don’t have to make a prompt though
