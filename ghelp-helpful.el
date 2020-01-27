@@ -100,8 +100,8 @@
 (defun ghelp-helpful--describe (button)
   "Describe the symbol that this BUTTON represents."
   (let* ((sym (button-get button 'symbol))
-         (doc-v (ghelp-helpful-variable sym nil))
-         (doc-f (ghelp-helpful-callable sym nil))
+         (doc-v (ghelp-helpful-variable sym))
+         (doc-f (ghelp-helpful-callable sym))
          (ev (when doc-v (list
                           (format "%s (variable)" sym)
                           doc-v)))
@@ -109,7 +109,7 @@
                           (format "%s (callable)" sym)
                           doc-f)))
          (entry-list (remove nil (list ev ef))))
-    (ghelp--show-page sym entry-list nil ghelp-page--mode
+    (ghelp--show-page sym entry-list ghelp-page--mode
                       (selected-window))))
 
 (define-button-type 'ghelp-helpful-describe-exactly-button

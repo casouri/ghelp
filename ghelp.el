@@ -204,9 +204,9 @@ SYMBOL is intended for internal use."
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
-    (pcase-let* ((`(,symbol ,entry-list ,store)
+    (pcase-let* ((`(,symbol ,entry-list)
                   (funcall backend no-prompt symbol)))
-      (ghelp--show-page symbol entry-list store mode window))))
+      (ghelp--show-page symbol entry-list mode window))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -493,8 +493,6 @@ Each entry is a ‘ghelp-entry’.")
 ;; - ‘ghelp-folded-entry’
 ;; - ‘ghelp-entry’
 ;; - ‘ghelp--show-page’
-;; - ‘ghelp-page-store-get’
-;; - ‘ghelp-page-store-set’
 ;; - ‘ghelp-page--mode’
 ;; - ‘ghelp-page--symbol’
 
@@ -578,9 +576,6 @@ Each entry is a ‘ghelp-entry’.")
                  face info-header-node
                  mouse-face highlight)))))
   "Setup current page’s header line.")
-
-(defvar-local ghelp-page--store nil
-  "Store information in page. An alist.")
 
 ;;;;; Commands
 
@@ -696,14 +691,12 @@ If FOLD non-nil, fold the entry after insertion."
   (or ghelp-page--history
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
-(defun ghelp--show-page (symbol entry-list store mode &optional window)
-  "Display page for SYMBOL with ENTRY-LIST & STORE in MODE, in WINDOW if non-nil."
+(defun ghelp--show-page (symbol entry-list mode &optional window)
+  "Display page for SYMBOL with ENTRY-LIST in MODE, in WINDOW if non-nil."
   (let ((page (ghelp-get-page-or-create mode symbol)))
     (with-current-buffer page
       (ghelp-page-clear)
       (ghelp-page-insert-entry-list entry-list t)
-      (pcase-dolist (`(,key ,value) store)
-        (ghelp-page-store-set key value))
       (goto-char
        (point-max))
       (ghelp-previous-entry)
@@ -715,14 +708,6 @@ If FOLD non-nil, fold the entry after insertion."
       (setq window (display-buffer page)))
     (when help-window-select
       (select-window window))))
-
-(defun ghelp-page-store-set (key value)
-  "Set KEY VALUE pair in PAGE store."
-  (setf (alist-get key ghelp-page--store) value))
-
-(defun ghelp-page-store-get (key)
-  "Get KEY from PAGE’s store."
-  (alist-get key ghelp-page--store))
 
 ;;; Backend
 ;;
@@ -763,8 +748,6 @@ ENTRY is (TITLE DOC)."
                        (ghelp-completing-read ; I can also use ‘completing-read’
                         default-symbol
                         '("woome" "veemo" "love" "and" "peace" "many")))))
-         ;; just to demo a usage of ‘store’
-         (ghelp-page-store-get 'my-var) ; = "cool"
          ;; get documentation
          ;; note that title doesn’t need ending newline but doc does
          (entry-list (pcase symbol
@@ -776,8 +759,7 @@ ENTRY is (TITLE DOC)."
                        ("peace" '(("Peace"  "もう大丈夫だ！なぜって？私が来た！\n")))
                        ;; multiple entries
                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    ;; store some value for later use
-    (list symbol entry-list `((my-var "cool")))))
+    (list symbol entry-list)))
 
 (provide 'ghelp)
 
