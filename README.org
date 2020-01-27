@@ -75,6 +75,7 @@ If SYMBOL non-nil, just describe it, otherwise get a symbol by prompting or gues
          ;; just to demo a usage of ‘store’
          (ghelp-page-store-get 'my-var) ; = "cool"
          ;; get documentation
+         ;; note that title doesn’t need ending newline but doc does
          (entry-list (pcase symbol
                        ;;           title   documentation
                        ("woome" '(("Woome"  "Woome!\n")))
