@@ -113,29 +113,12 @@
                       (selected-window))))
 
 (define-button-type 'ghelp-helpful-describe-exactly-button
-  'action #'ghelp-helpful--describe-exactly
+  'action #'ghelp-helpful--describe
   'symbol nil
   'callable-p nil
   'follow-link t
   'help-echo "Describe this symbol")
 
-(defun helpful--describe-exactly (button)
-  "Describe the symbol that this BUTTON represents.
-This differs from `helpful--describe' because here we know
-whether the symbol represents a variable or a callable."
-  (let ((sym (button-get button 'symbol))
-        (callable-p (button-get button 'callable-p))
-        (doc-v (ghelp-helpful-variable sym nil))
-        (doc-f (ghelp-helpful-callable sym nil))
-        (ev (when doc-v (make-ghelp-entry
-                         :name (format "%s (variable)" sym)
-                         :text doc-v)))
-        (ef (when doc-f (make-ghelp-entry
-                         :name (format "%s (callable)" sym)
-                         :text doc-f)))
-        (entry-list (list (if callable-p ef ev))))
-    (ghelp--show-page sym ghelp-page--mode nil nil
-                      entry-list (selected-window))))
 
 (provide 'ghelp-helpful)
 
