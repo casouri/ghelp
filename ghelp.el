@@ -755,8 +755,6 @@ ENTRY is (TITLE DOC)."
                        ("woome" '(("Woome"  "Woome!\n")))
                        ("veemo" '(("Veemo"  "Veemo!\n")))
                        ("love"  '(("Love"   "Love is good.\n")))
-                       ("and"   '(("And"    "And is a conjunction.\n")))
-                       ("peace" '(("Peace"  "もう大丈夫だ！なぜって？私が来た！\n")))
                        ;; multiple entries
                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
     (list symbol entry-list)))
