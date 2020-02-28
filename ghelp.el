@@ -100,13 +100,13 @@ ARGS is passed to ‘describe-function’."
   :global t
   (if (not ghelp-global-minor-mode)
       (setq ghelp-backend-alist nil)
-    (when (require 'helpful nil t)
+    (with-eval-after-load 'helpful
       (require 'ghelp-helpful)
       (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
-    (when (require 'eglot nil t)
+    (with-eval-after-load 'eglot
       (require 'ghelp-eglot)
       (ghelp-register-backend ghelp-eglot-supported-modes
-                              #'ghelp-eglot-backend))))
+                          #'ghelp-eglot-backend))))
 
 ;;; Etc
 
