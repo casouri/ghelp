@@ -6,6 +6,176 @@
 
 ;;; Commentary:
 ;;
+;; This package provides a generic help system similar to Emacs Help.
+;; Unlike Emacs Help, ghelp works for more major-modes and is extensible
+;; with backends.
+;; 
+;; [☞ Screencasts]
+;; 
+;; Currently supported backends:
+;; • [helpful]
+;; • [eglot]
+;; 
+;; 
+;; [☞ Screencasts] <https://github.com/casouri/ghelp#screencasts>
+;; 
+;; [helpful] <https://github.com/Wilfred/helpful>
+;; 
+;; [eglot] <https://github.com/joaotavora/eglot>
+;; 
+;; 
+;; 1 Install & load
+;; ════════════════
+;; 
+;;   Download the files and add them to load path.
+;; 
+;;   With `use-package':
+;;   ┌────
+;;   │ (use-package ghelp
+;;   │   :config (ghelp-global-minor-mode))
+;;   └────
+;;   Without `use-package':
+;;   ┌────
+;;   │ (require 'ghelp)
+;;   │ (ghelp-global-minor-mode)
+;;   └────
+;; 
+;; 
+;; 2 Usage
+;; ═══════
+;; 
+;;   Currently you can bind `ghelp-describe' and `ghelp-describe-at-point'
+;;   to a keybinding you like, or bind `ghelp-map'. To resume to a previous
+;;   opened page (like `helm-resume'), use `ghelp-resume'.
+;; 
+;;   To access Emacs Lisp help regardless of your current major mode, use
+;;   `ghelp-describe-as-in-emacs-lisp-mode'.
+;; 
+;; 
+;; 3 In ghelp buffer
+;; ═════════════════
+;; 
+;;   A ghelp buffer is called a page. Each page is made of several entries.
+;;   Each entry is a self-contained documentation. (For example, you could
+;;   have a entry for a symbol as a function and another one for it as a
+;;   variable.)
+;; 
+;;   Commands you can use:
+;; 
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;    Key            Command                        
+;;   ───────────────────────────────────────────────
+;;    `f/b'          go forward/backward in history 
+;;    `n/p'          next/previous entry            
+;;    `m/['          next/previous button           
+;;    `TAB'          collapse/expand entry          
+;;    `g'            refresh page                   
+;;    `q'            close page                     
+;;    `<space>'      scroll down                    
+;;    `<backspace>'  scroll up                      
+;;    `s'            search/switch to a page        
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 
+;; 
+;; 4 Customization
+;; ═══════════════
+;; 
+;;   If you want several major modes to share the same set of history and
+;;   backends (like `lisp-interaction-mode' and `emacs-lisp-mode'), add an
+;;   entry `(mode1 . mode2)' to `ghelp-mode-share-alist', and `mode1' will
+;;   share everything of `mode2'.
+;; 
+;;   You can customize faces: `ghelp-entry', `ghelp-folded-entry', and
+;;   `ghelp-entry-title'.
+;; 
+;;   Normally if you call `ghelp-describe-function' it selects the backends
+;;   to use by the current major-mode. If you want to look up some symbol
+;;   with a specific backend, try `(ghelp-describe-as-in 'mode)'. For
+;;   example, you can bind
+;;   ┌────
+;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-as-in ’emacs-lisp-mode)))
+;;   └────
+;;   to look up Emacs Lisp symbols regardless of which major mode you are
+;;   currently in.
+;; 
+;; 
+;; 5 Write a backend
+;; ═════════════════
+;; 
+;;   Each major mode is tied to one backend. Each backend is a function
+;;   that does all the work: get a symbol, find the documentation and
+;;   return them.
+;; 
+;;   This function takes two optional arguments, `no-prompt' and `symbol'.
+;;   If `no-prompt' is non-nil, the backend should not invoke a prompt and
+;;   rather guess the symbol, if `symbol' is non-nil, then the backend
+;;   should describe this symbol and not try to get the symbol by itself
+;;   (prompting, etc). Generally this function is called at where the user
+;;   calls `ghelp-describe', so you can use `symbol-at-point' to guess the
+;;   symbol intended. But beware that this function could be called
+;;   anywhere — in a ghelp buffer when refreshing, for instance. In that
+;;   case `symbol' is provided.
+;; 
+;;   The backend should return `(SYMBOL ENTRY-LIST)'. `SYMBOL' is a string
+;;   representing the symbol it is describing. `ENTRY-LIST' in turn is a
+;;   list of `(TITLE BODY)'. `TITLE' is the title of this documentation
+;;   entry, normally you can make it the same as `SYMBOL'. Helpful backend
+;;   distinguishes variable and functions, so the title would be like
+;;   “SYMBOL (variable)”. `BODY' is the documentation text. `TITLE' should
+;;   not end with newline (unless you want extra newlines between entry
+;;   title and body), and `BODY' should end with one newline.
+;; 
+;;   Below is an example backend that gets the symbol and then the
+;;   documentation and returns them. It only recognizes “woome”, “veemo”,
+;;   “love” and “many”.
+;;   ┌────
+;;   │ (defun ghelp-dummy-backend (&optional no-prompt symbol)
+;;   │   "Demo. No prompt if NO-PROMPT is non-nil.
+;;   │ If SYMBOL non-nil, just describe it, otherwise get a symbol by
+;;   │ prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
+;;   │ is a string, and ENTRY-LIST is a list (ENTRY ...), where each
+;;   │ ENTRY is (TITLE DOC)."
+;;   │   (let* ((default-symbol (symbol-at-point))
+;;   │          (symbol (or symbol
+;;   │                      ;; get symbol from user, I don’t have to make a prompt though
+;;   │                      (if no-prompt
+;;   │                          default-symbol
+;;   │                        (ghelp-completing-read ; I can also use ‘completing-read’
+;;   │                         default-symbol
+;;   │                         '("woome" "veemo" "love" "and" "peace" "many")))))
+;;   │          ;; get documentation
+;;   │          ;; note that title doesn’t need ending newline but doc does
+;;   │          (entry-list (pcase symbol
+;;   │                        ;;           title   documentation
+;;   │                        ("woome" '(("Woome"  "Woome!\n")))
+;;   │                        ("veemo" '(("Veemo"  "Veemo!\n")))
+;;   │                        ("love"  '(("Love"   "Love is good.\n")))
+;;   │                        ;; multiple entries
+;;   │                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
+;;   │     (list symbol entry-list)))
+;;   └────
+;; 
+;;   Register your backend by
+;;   ┌────
+;;   │ (ghelp-register-backend 'major-mode #'your-backend-function)
+;;   └────
+;; 
+;; 
+;; 6 Screencasts
+;; ═════════════
+;; 
+;;   *Eglot*
+;; 
+;;   <file:./ghelp-eglot-800.gif>
+;; 
+;;   *Helpful*
+;; 
+;;   <file:./ghelp-helpful-800.gif>
+;;
+;;; Commentary end
+
+;;; Developer:
+;;
 ;;;; Usage
 
 ;; Use these functions:
