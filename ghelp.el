@@ -276,7 +276,11 @@ ARGS is passed to ‘describe-function’."
     (with-eval-after-load 'eglot
       (require 'ghelp-eglot)
       (ghelp-register-backend ghelp-eglot-supported-modes
-                          #'ghelp-eglot-backend))))
+                          #'ghelp-eglot-backend))
+    (with-eval-after-load 'geiser
+      (require 'ghelp-geiser)
+      (ghelp-register-backend 'scheme-mode #'ghelp-geiser-backend)
+      (ghelp-register-backend 'geiser-repl-mode #'ghelp-geiser-backend))))
 
 ;;; Etc
 
