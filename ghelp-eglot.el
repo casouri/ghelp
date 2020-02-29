@@ -11,21 +11,19 @@
 (require 'eglot)
 
 (defvar ghelp-eglot-supported-modes (let (list)
-                                      (dolist (cell eglot-server-programs list)
-                                        (if (symbolp (car cell))
-                                            (push (car cell) list)
-                                          (setq list (append (car cell) list)))))
+                            (dolist (cell eglot-server-programs list)
+                              (if (symbolp (car cell))
+                                  (push (car cell) list)
+                                (setq list (append (car cell) list)))))
   "A list of major modes that are supported by eglot.")
 
-(defun ghelp-eglot-backend (&optional no-prompt refresh)
+(defun ghelp-eglot-backend (&optional _ symbol)
+  "Eglot backend."
+  (when symbol
+    (user-error "Eglot doesn’t support looking up specific symbol or refreshing"))
   (when eglot--managed-mode
     (let* ((marker (point-marker))
-           (symbol (if refresh (save-excursion
-                                 (goto-char
-                                  (ghelp-page-store-get 'refresh-marker))
-                                 (symbol-at-point))
-                     (symbol-name (symbol-at-point))))
-           (mode (ghelp-get-mode))
+           (symbol (symbol-at-point))
            (doc (catch 'ret
                   (eglot--dbind
                       ((Hover) contents range)
@@ -33,10 +31,7 @@
                                        (eglot--TextDocumentPositionParams))
                     (when (seq-empty-p contents) (throw 'ret nil))
                     (concat (eglot--hover-info contents range) "\n")))))
-      (when doc
-        (list symbol
-              `((,symbol ,doc))
-              `((refresh-marker ,marker)))))))
+      (when doc `(,symbol ((,symbol ,doc)))))))
 
 
 

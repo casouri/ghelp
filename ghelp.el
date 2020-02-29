@@ -78,12 +78,12 @@
 ARGS is passed to ‘describe-function’."
   (let ((ghelp--overwrite-mode mode))
     (ignore ghelp--overwrite-mode)
-    (apply #'ghelp-describe args)))
+    (apply #'ghelp--describe-1 args)))
 
-(defun ghelp-describe-as-in-emacs-lisp-mode (&rest args)
-  "Describe as if in ‘emacs-lisp-mode’, ARGS is passed to ‘describe-function’."
+(defun ghelp-describe-as-in-emacs-lisp-mode ()
+  "Describe as if in ‘emacs-lisp-mode’."
   (interactive)
-  (apply #'ghelp-describe-as-in 'emacs-lisp-mode args))
+  (ghelp-describe-as-in 'emacs-lisp-mode 'force-prompt))
 
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
                     (define-key map (kbd "C-h") #'ghelp-describe-symbol)
@@ -176,7 +176,7 @@ If MODE doesn’t point to anything, return itself."
 (defun ghelp-refresh ()
   "Refresh current page."
   (interactive)
-  (ghelp-describe t ghelp-page--symbol))
+  (ghelp--describe-1 t ghelp-page--symbol))
 
 (defun ghelp-completing-read (default-symbol &rest args)
   "‘completing-read’ with two improvements.
@@ -193,25 +193,57 @@ If MODE doesn’t point to anything, return itself."
          (symbol (apply #'completing-read prompt args)))
     (if (equal symbol "") default-symbol symbol)))
 
-(defun ghelp-describe (&optional no-prompt symbol)
+(defmacro ghelp-maybe-prompt (prompt default-symbol prompt-form)
+  "Get symbol according to prompting strategy PROMPT.
+
+Execute the default prompting strategy for ghelp:
+ 1. If PROMPT is 'no-prompt, we absolutely don’t show prompt and use
+    DEFAULT-SYMBOL.
+ 2. If PROMPT is 'force-prompt, we always prompt for symbol.
+ 3. If PROMPT is nil, we try to use DEFAULT-SYMBOL, but if it’s nil,
+    we prompt the user for one.
+
+PROMPT-FORM is the form for prompting for a symbol."
+  (declare (indent 2))
+  `(cond ((eq ,prompt 'no-prompt)
+          ,default-symbol)
+         ((and (eq ,prompt nil) ,default-symbol)
+          ,default-symbol)
+         (t ,prompt-form)))
+
+(defun ghelp-describe (prompt)
   "Describe symbol.
 
-Select PAGE if ‘help-window-select’ is non-nil. If NO-PROMPT
-non-nil, no prompt. If SYMBOL is non-nil, describe SYMBOL.
-SYMBOL is intended for internal use."
-  (interactive)
+PROMPT can be 'no-prompt, 'force-prompt or nil. 'no-prompt means
+don’t prompt for symbol; 'foce-prompt means always prompt for
+symbol, nil means only prompt when there is no valid symbol at point."
+  (interactive "p")
+  (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
+    (ghelp--describe-1 prompt)))
+
+(defun ghelp--describe-1 (&optional prompt symbol)
+  "Describe symbol.
+
+PROMPT can be 'no-prompt, 'force-prompt or nil. 'no-prompt means
+don’t prompt for symbol; 'foce-prompt means always prompt for
+symbol, nil means only prompt when there is no valid symbol at point.
+
+If SYMBOL is non-nil, describe SYMBOL. SYMBOL is intended for
+internal use."
   (let* ((mode (ghelp-get-mode))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
-    (pcase-let* ((`(,symbol ,entry-list)
-                  (funcall backend no-prompt symbol)))
-      (ghelp--show-page symbol entry-list mode window))))
+    (if backend
+        (pcase-let* ((`(,symbol ,entry-list)
+                      (funcall backend prompt symbol)))
+          (ghelp--show-page symbol entry-list mode window))
+      (user-error "No backend found for %s" major-mode))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
   (interactive)
-  (ghelp-describe t))
+  (ghelp-describe 'no-prompt))
 
 ;;; History
 ;;
@@ -734,20 +766,17 @@ MODE can be a major mode symbol or a list of it."
 
 ;;; Dummy
 
-(defun ghelp-dummy-backend (&optional no-prompt symbol)
+(defun ghelp-dummy-backend (&optional prompt symbol)
   "Demo. No prompt if NO-PROMPT is non-nil.
 If SYMBOL non-nil, just describe it, otherwise get a symbol by
 prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
   (let* ((default-symbol (symbol-at-point))
-         (symbol (or symbol
-                     ;; get symbol from user, I don’t have to make a prompt though
-                     (if no-prompt
-                         default-symbol
-                       (ghelp-completing-read ; I can also use ‘completing-read’
-                        default-symbol
-                        '("woome" "veemo" "love" "and" "peace" "many")))))
+         (symbol (ghelp-maybe-prompt prompt default-symbol
+                   (ghelp-completing-read ; I can also use ‘completing-read’
+                    default-symbol
+                    '("woome" "veemo" "love" "and" "peace" "many"))))
          ;; get documentation
          ;; note that title doesn’t need ending newline but doc does
          (entry-list (pcase symbol
