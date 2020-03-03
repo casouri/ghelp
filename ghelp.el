@@ -256,31 +256,13 @@ ARGS is passed to ‘describe-function’."
   (ghelp-describe-as-in 'emacs-lisp-mode 'force-prompt))
 
 (defvar ghelp-map (let ((map (make-sparse-keymap)))
-                    (define-key map (kbd "C-h") #'ghelp-describe-symbol)
-                    (define-key map (kbd "C-p") #'ghelp-describe-at-point)
-                    (define-key map "C-r" #'ghelp-resume)
-                    (define-key map "h" #'help-command)
-                    (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
-                    map)
+                (define-key map (kbd "C-h") #'ghelp-describe-symbol)
+                (define-key map (kbd "C-p") #'ghelp-describe-at-point)
+                (define-key map "C-r" #'ghelp-resume)
+                (define-key map "h" #'help-command)
+                (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
+                map)
   "Map for ghelp. Bind this map to some entry key sequence.")
-
-(define-minor-mode ghelp-global-minor-mode
-  "Setup ghelp backends."
-  :lighter ""
-  :global t
-  (if (not ghelp-global-minor-mode)
-      (setq ghelp-backend-alist nil)
-    (with-eval-after-load 'helpful
-      (require 'ghelp-helpful)
-      (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
-    (with-eval-after-load 'eglot
-      (require 'ghelp-eglot)
-      (ghelp-register-backend ghelp-eglot-supported-modes
-                          #'ghelp-eglot-backend))
-    (with-eval-after-load 'geiser
-      (require 'ghelp-geiser)
-      (ghelp-register-backend 'scheme-mode #'ghelp-geiser-backend)
-      (ghelp-register-backend 'geiser-repl-mode #'ghelp-geiser-backend))))
 
 ;;; Etc
 
@@ -961,6 +943,23 @@ ENTRY is (TITLE DOC)."
                        ;; multiple entries
                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
     (list symbol entry-list)))
+
+;;; Setup
+
+(when (require 'helpful nil t)
+  (require 'ghelp-helpful)
+  (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
+
+(with-eval-after-load 'eglot
+  (require 'ghelp-eglot)
+  (ghelp-register-backend ghelp-eglot-supported-modes
+                      #'ghelp-eglot-backend))
+
+(with-eval-after-load 'geiser
+  (require 'ghelp-geiser)
+  (ghelp-register-backend 'scheme-mode #'ghelp-geiser-backend)
+  (ghelp-register-backend 'geiser-repl-mode #'ghelp-geiser-backend))
+
 
 (provide 'ghelp)
 

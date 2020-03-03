@@ -7,20 +7,18 @@ This package provides a generic help system similar to Emacs Help. Unlike Emacs 
 Currently supported backends:
 - [[https://github.com/Wilfred/helpful][helpful]]
 - [[https://github.com/joaotavora/eglot][eglot]]
+- [[https://www.nongnu.org/geiser/][geiser]]
 
 * Install & load
-
 Download the files and add them to load path.
 
 With ~use-package~:
 #+BEGIN_SRC emacs-lisp
-(use-package ghelp
-  :config (ghelp-global-minor-mode))
+(use-package ghelp)
 #+END_SRC
 Without ~use-package~:
 #+BEGIN_SRC emacs-lisp
 (require 'ghelp)
-(ghelp-global-minor-mode)
 #+END_SRC
 
 * Usage
