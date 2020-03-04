@@ -868,7 +868,7 @@ If FOLD non-nil, fold the entry after insertion."
 ;; Helpers
 
 (defun ghelp--make-button (text fn)
-  "Return a clickable TEXT that invokes FN when clicked by mouse-1."
+  "Return a clickable TEXT that invokes FN when clicked by <mouse-1>."
   (propertize text 'keymap (let ((map (make-sparse-keymap)))
                              (define-key map [down-mouse-1] fn)
                              map)))
