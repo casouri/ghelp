@@ -63,17 +63,15 @@ The backend should return ~(SYMBOL ENTRY-LIST)~. ~SYMBOL~ is a string representi
 
 Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “many”.
 #+BEGIN_SRC emacs-lisp
-(defun ghelp-dummy-backend (&optional no-prompt symbol)
-  "Demo. No prompt if NO-PROMPT is non-nil.
+(defun ghelp-dummy-backend (&optional prompt symbol)
+  "Demo. Prompt behavior depends on PROMPT.
 If SYMBOL non-nil, just describe it, otherwise get a symbol by
 prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
   (let* ((default-symbol (symbol-at-point))
          (symbol (or symbol
-                     ;; get symbol from user, I don’t have to make a prompt though
-                     (if no-prompt
-                         default-symbol
+                     (ghelp-maybe-prompt prompt default-symbol
                        (ghelp-completing-read ; I can also use ‘completing-read’
                         default-symbol
                         '("woome" "veemo" "love" "and" "peace" "many")))))
