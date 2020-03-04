@@ -14,16 +14,17 @@
 (defun ghelp-helpful-backend (&optional prompt symbol)
   (let* ((mode (ghelp-get-mode))
          (default-symbol (symbol-at-point))
-         (symbol (intern-soft
-                  (ghelp-maybe-prompt prompt default-symbol
-                    (ghelp-completing-read ; I can also use ‘completing-read’
-                     default-symbol
-                     obarray
-                     (lambda (s) (let ((s (intern-soft s)))
-                                   (or (fboundp s)
-                                       (boundp s)
-                                       (facep s)
-                                       (cl--class-p s))))))))
+         (symbol (or symbol
+                     (intern-soft
+                      (ghelp-maybe-prompt prompt default-symbol
+                        (ghelp-completing-read ; I can also use ‘completing-read’
+                         default-symbol
+                         obarray
+                         (lambda (s) (let ((s (intern-soft s)))
+                                       (or (fboundp s)
+                                           (boundp s)
+                                           (facep s)
+                                           (cl--class-p s)))))))))
          (callable-doc (ghelp-helpful-callable symbol))
          (variable-doc (ghelp-helpful-variable symbol))
          (entry-list (remove
