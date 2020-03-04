@@ -107,24 +107,29 @@
 ;;   that does all the work: get a symbol, find the documentation and
 ;;   return them.
 ;; 
-;;   This function takes two optional arguments, `no-prompt' and `symbol'.
-;;   If `no-prompt' is non-nil, the backend should not invoke a prompt and
-;;   rather guess the symbol, if `symbol' is non-nil, then the backend
-;;   should describe this symbol and not try to get the symbol by itself
-;;   (prompting, etc). Generally this function is called at where the user
-;;   calls `ghelp-describe', so you can use `symbol-at-point' to guess the
-;;   symbol intended. But beware that this function could be called
-;;   anywhere — in a ghelp buffer when refreshing, for instance. In that
-;;   case `symbol' is provided.
+;;   This function takes two optional arguments, `PROMPT' and `SYMBOL'
+;;   (string). `PROMPT' determines the prompting strategy: use symbol at
+;;   point, prompt for symbol or only prompt when no symbol at point. You
+;;   should let `ghelp-maybe-prompt' handle it for you. If `SYMBOL' is
+;;   non-nil, then the backend should describe this symbol and not try to
+;;   get the symbol by itself (prompting, etc). Currently this is used to
+;;   handle refreshing: when refresh ghelp will provide the backend the
+;;   symbol to use through `SYMBOL' parameter.
+;; 
+;;   Generally this backend function is called at where the user calls
+;;   `ghelp-describe', so you can use `symbol-at-point' to guess the symbol
+;;   intended. Of course this is not the case when refreshing — you would
+;;   be in a ghelp buffer. But then ghelp will give you the symbol so no
+;;   problem there.
 ;; 
 ;;   The backend should return `(SYMBOL ENTRY-LIST)'. `SYMBOL' is a string
 ;;   representing the symbol it is describing. `ENTRY-LIST' in turn is a
 ;;   list of `(TITLE BODY)'. `TITLE' is the title of this documentation
-;;   entry, normally you can make it the same as `SYMBOL'. Helpful backend
-;;   distinguishes variable and functions, so the title would be like
-;;   “SYMBOL (variable)”. `BODY' is the documentation text. `TITLE' should
-;;   not end with newline (unless you want extra newlines between entry
-;;   title and body), and `BODY' should end with one newline.
+;;   entry, normally you can make it the same as `SYMBOL' [1]. `BODY' is
+;;   the documentation text. `TITLE' should not end with newline (unless
+;;   you want extra newlines between entry title and body), and `BODY'
+;;   should end with one newline. Note that `SYMBOL' and `TITLE' are all
+;;   strings.
 ;; 
 ;;   Below is an example backend that gets the symbol and then the
 ;;   documentation and returns them. It only recognizes “woome”, “veemo”,
@@ -170,6 +175,14 @@
 ;;   *Helpful*
 ;; 
 ;;   <file:./ghelp-helpful-800.gif>
+;; 
+;; 
+;; 
+;; Footnotes
+;; ─────────
+;; 
+;; [1] Helpful backend distinguishes variable and functions, so the title
+;; would be like “SYMBOL (variable)”.
 ;;
 ;;; Commentary end
 
