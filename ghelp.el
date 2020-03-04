@@ -922,16 +922,17 @@ MODE can be a major mode symbol or a list of it."
 ;;; Dummy
 
 (defun ghelp-dummy-backend (&optional prompt symbol)
-  "Demo. No prompt if NO-PROMPT is non-nil.
+  "Demo. Prompt behavior depends on PROMPT.
 If SYMBOL non-nil, just describe it, otherwise get a symbol by
 prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
   (let* ((default-symbol (symbol-at-point))
-         (symbol (ghelp-maybe-prompt prompt default-symbol
-                   (ghelp-completing-read ; I can also use ‘completing-read’
-                    default-symbol
-                    '("woome" "veemo" "love" "and" "peace" "many"))))
+         (symbol (or symbol
+                     (ghelp-maybe-prompt prompt default-symbol
+                       (ghelp-completing-read ; I can also use ‘completing-read’
+                        default-symbol
+                        '("woome" "veemo" "love" "and" "peace" "many")))))
          ;; get documentation
          ;; note that title doesn’t need ending newline but doc does
          (entry-list (pcase symbol
