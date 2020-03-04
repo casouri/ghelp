@@ -11,6 +11,7 @@
 ;;
 
 (require 'ert)
+(require 'ghelp)
 
 (ert-deftest ert-test-history ()
   "Create a history, push, jump and find."
