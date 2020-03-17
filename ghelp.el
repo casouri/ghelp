@@ -503,7 +503,8 @@ the last one. COUNT can be negative."
                 ;; maybe remove the bottom node if too long
                 (if (< (length nodes) ghelp-history-max-length)
                     nodes
-                  (kill-buffer (ghelp-history-node-buffer (last nodes)))
+                  (kill-buffer
+                   (ghelp-history-node-buffer (car (last nodes))))
                   (butlast nodes)))
           (ghelp-history-point history) 0))
 
