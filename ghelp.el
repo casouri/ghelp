@@ -721,7 +721,7 @@ Each entry is a ‘ghelp-entry’.")
 ;;;;; Variables
 
 (defface ghelp-entry (let ((display t)
-                           (atts nil))
+                           (atts '(:inherit nil)))
                        `((,display . ,atts)))
   "Face for each entry in a documentation."
   :group 'ghelp)
