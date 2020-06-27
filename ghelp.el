@@ -700,7 +700,9 @@ Each entry is a ‘ghelp-entry’.")
 
 (defvar ghelp-page-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "TAB") #'ghelp-toggle-entry)
+    (define-key map (kbd "<C-tab>") #'ghelp-toggle-entry)
+    (define-key map (kbd "TAB") #'forward-button)
+    (define-key map (kbd "<backtab>") #'backward-button)
     (define-key map "q" #'ghelp-close)
     (define-key map "b" #'ghelp-back)
     (define-key map "f" #'ghelp-forward)
