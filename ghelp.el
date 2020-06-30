@@ -278,7 +278,13 @@ ARGS is passed to ‘describe-function’."
 
 ;;; Etc
 
-(defvar ghelp-mode-share-alist `((lisp-interaction-mode . emacs-lisp-mode))
+(defvar ghelp-mode-share-alist `((lisp-interaction-mode . emacs-lisp-mode)
+                                 ;; Without this setting ghelp can’t
+                                 ;; resolve the backend if you call
+                                 ;; helpful commands directly (instead
+                                 ;; of through ‘ghelp-describe’), e.g,
+                                 ;; ‘helpful-key’.
+                                 (helpful-mode . emacs-lisp-mode))
   "An alist specifing how major modes shares documentations.
 
 An entry like (major-mode1 . major-mode2) makes MAJOR-MODE1
