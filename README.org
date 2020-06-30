@@ -31,12 +31,13 @@ A ghelp buffer is called a page. Each page is made of several entries. Each entr
 
 Commands you can use:
 
-| Key           | Command                        |
-|---------------+--------------------------------|
+| Key         | Command                        |
+|-------------+--------------------------------|
 | =f/b=         | go forward/backward in history |
-| =n/p=         | next/previous entry            |
+| =n/p=         | next/previous line             |
+| =N/P=         | next/previous entry            |
 | =m/[=         | next/previous button           |
-| =TAB=         | next button |
+| =TAB=         | next button                    |
 | =C-TAB=       | collapse/expand entry          |
 | =g=           | refresh page                   |
 | =q=           | close page                     |
@@ -58,11 +59,27 @@ to look up Emacs Lisp symbols regardless of which major mode you are currently i
 * Write a backend
 Each major mode is tied to one backend. Each backend is a function that does all the work: get a symbol, find the documentation and return them. 
 
-This function takes two optional arguments, ~PROMPT~ and ~SYMBOL~ (string). ~PROMPT~ determines the prompting strategy: use symbol at point, prompt for symbol or only prompt when no symbol at point. You should let ~ghelp-maybe-prompt~ handle it for you. If ~SYMBOL~ is non-nil, then the backend should describe this symbol and not try to get the symbol by itself (prompting, etc). Currently this is used to handle refreshing: when refresh ghelp will provide the backend the symbol to use through ~SYMBOL~ parameter.
+The backend function should look like this:
 
-Generally this backend function is called at where the user calls ~ghelp-describe~, so you can use ~symbol-at-point~ to guess the symbol intended. Of course this is not the case when refreshing — you would be in a ghelp buffer. But then ghelp will give you the symbol so no problem there.
+#+begin_src emacs-lisp
+(defun my-backend (&optional prompt symbol &rest _)
+  (let* ((symbol (or symbol
+                     (ghelp-maybe-prompt prompt (symbol-name
+                                                 (symbol-at-point))
+                       (completing-read "Symbol: " '("A" "B" "C")))))
+         (doc (get-documentation symbol)))
+    (symbol (("Entry 1" "Documentation body")
+             ("Entry 2" "Documentation body")))))
+#+end_src
 
-The backend should return ~(SYMBOL ENTRY-LIST)~. ~SYMBOL~ is a string representing the symbol it is describing. ~ENTRY-LIST~ in turn is a list of ~(TITLE BODY)~. ~TITLE~ is the title of this documentation entry, normally you can make it the same as ~SYMBOL~ [fn:1]. ~BODY~ is the documentation text. ~TITLE~ should not end with newline (unless you want extra newlines between entry title and body), and ~BODY~ should end with one newline. Note that ~SYMBOL~ and ~TITLE~ are all strings.
+1. Resolve symbol. If ~SYMBOL~ (string) is non-nil, just use it. If it is nil, you need to either guess for one or prompt the user for the symbol. ~PROMPT~ represents the prompting strategy, there are three strategies:
+- ~'no-prompt~: Never prompt user. We guess the symbol or fail.
+- ~'force-prompt~: Must prompt user.
+- ~nil~: If we can guess the symbol, don’t show prompt, if not, prompt for a symbol.
+
+You can guess the symbol by ~(symbol-name (symbol-at-point))~ and prompt for a symbol by ~completing-read~. In addition, ghelp provides a helpful macro ~ghelp-maybe-prompt~ to handle ~PROMPT~ for you (as shown in the example).
+
+The return values is ~(SYMBOL ((TITLE BODY) ...))~. SYMBOL is just the symbol (again, a string). ~TITLE~ is the title of the documentation, ~BODY~ is documentation body (has to end with newline). You can have multiple documentations if you wish. Maybe the symbol can mean multiple things. In Emacs Lisp, a symbol can be a function, a variable, a face, etc, at the same time.
 
 Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “many”.
 #+BEGIN_SRC emacs-lisp
@@ -72,7 +89,7 @@ If SYMBOL non-nil, just describe it, otherwise get a symbol by
 prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
-  (let* ((default-symbol (symbol-at-point))
+  (let* ((default-symbol (symbol-name (symbol-at-point)))
          (symbol (or symbol
                      (ghelp-maybe-prompt prompt default-symbol
                        (ghelp-completing-read ; I can also use ‘completing-read’
@@ -103,5 +120,3 @@ Register your backend by
 *Helpful*
 
 [[./ghelp-helpful-800.gif]]
-
-[fn:1] Helpful backend distinguishes variable and functions, so the title would be like “SYMBOL (variable)”.
