@@ -949,7 +949,7 @@ If SYMBOL non-nil, just describe it, otherwise get a symbol by
 prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
-  (let* ((default-symbol (symbol-at-point))
+  (let* ((default-symbol (symbol-name (symbol-at-point)))
          (symbol (or symbol
                      (ghelp-maybe-prompt prompt default-symbol
                        (ghelp-completing-read ; I can also use ‘completing-read’

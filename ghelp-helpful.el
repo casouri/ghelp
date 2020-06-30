@@ -13,7 +13,7 @@
 
 (defun ghelp-helpful-backend (&optional prompt symbol)
   (let* ((mode (ghelp-get-mode))
-         (default-symbol (symbol-at-point))
+         (default-symbol (symbol-name (symbol-at-point)))
          (symbol (or symbol
                      (intern-soft
                       (ghelp-maybe-prompt prompt default-symbol
