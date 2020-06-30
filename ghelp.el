@@ -69,7 +69,8 @@
 ;;    `f/b'          go forward/backward in history 
 ;;    `n/p'          next/previous entry            
 ;;    `m/['          next/previous button           
-;;    `TAB'          collapse/expand entry          
+;;    `TAB'          next button                    
+;;    `C-TAB'        collapse/expand entry          
 ;;    `g'            refresh page                   
 ;;    `q'            close page                     
 ;;    `<space>'      scroll down                    
