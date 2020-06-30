@@ -369,6 +369,7 @@ If MODE doesn’t point to anything, return itself."
 
 (defmacro ghelp-maybe-prompt (prompt default-symbol prompt-form)
   "Get symbol according to prompting strategy PROMPT.
+Return a string.
 
 Execute the default prompting strategy for ghelp:
  1. If PROMPT is 'no-prompt, we absolutely don’t show prompt and use
