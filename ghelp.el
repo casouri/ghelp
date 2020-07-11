@@ -105,15 +105,14 @@
 ;; 5 Write a backend
 ;; ═════════════════
 ;; 
-;;   Each major mode is tied to one backend. Each backend is a function
-;;   that does all the work: get a symbol, find the documentation and
-;;   return them.
+;;   A backend is a function that gets the symbol, find the documentation
+;;   and return them to ghelp.
 ;; 
 ;;   The backend function should look like this:
 ;; 
 ;;   ┌────
-;;   │ (defun my-backend (&optional prompt symbol &rest _)
-;;   │   (let* ((symbol (or symbol
+;;   │ (defun my-backend (&optional prompt data &rest _)
+;;   │   (let* ((symbol (or (plist-get data :symbol)
 ;;   │                      (ghelp-maybe-prompt prompt (symbol-name
 ;;   │                                                  (symbol-at-point))
 ;;   │                        (completing-read "Symbol: " '("A" "B" "C")))))
@@ -122,19 +121,33 @@
 ;;   │              ("Entry 2" "Documentation body")))))
 ;;   └────
 ;; 
-;;   1. Resolve symbol. If `SYMBOL' (string) is non-nil, just use it. If it
-;;      is nil, you need to either guess for one or prompt the user for the
-;;      symbol. `PROMPT' represents the prompting strategy, there are three
-;;      strategies:
+;;   `DATA' is a plist of form:
+;;   ┌────
+;;   │ (:symbol SYMBOL :marker MARKER)
+;;   └────
+;;   `SYMBOL' is either `nil' or a string. If `SYMBOL' is `non-nil', then
+;;   it is the symbol we want documentation for. If `SYMBOL' is `nil', you
+;;   should get the symbol from the user. `MARKER' is the point marker at
+;;   where the user requested for documentation.
+;; 
+;;   1. Resolve symbol. If `SYMBOL' is `non-nil', just use it. If it is
+;;      `nil', you need to either guess for one or prompt the user to type
+;;      in the symbol. `PROMPT' represents the prompting strategy, there
+;;      are three strategies:
 ;;   - `'no-prompt': Never prompt user. We guess the symbol or fail.
 ;;   - `'force-prompt': Must prompt user.
 ;;   - `nil': If we can guess the symbol, don’t show prompt, if not, prompt
 ;;     for a symbol.
 ;; 
-;;   You can guess the symbol by `(symbol-name (symbol-at-point))' and
-;;   prompt for a symbol by `completing-read'. In addition, ghelp provides
-;;   a helpful macro `ghelp-maybe-prompt' to handle `PROMPT' for you (as
-;;   shown in the example).
+;;   You can guess the symbol by
+;;   ┌────
+;;   │ (save-excursion
+;;   │   (goto-char (plist-get data :marker))
+;;   │   (symbol-name (symbol-at-point)))
+;;   └────
+;;   and prompt for a symbol by `completing-read'. Ghelp provides a helpful
+;;   macro `ghelp-maybe-prompt' to handle `PROMPT' for you (as shown in the
+;;   example).
 ;; 
 ;;   The return values is `(SYMBOL ((TITLE BODY) ...))'. SYMBOL is just the
 ;;   symbol (again, a string). `TITLE' is the title of the documentation,
@@ -147,14 +160,23 @@
 ;;   documentation and returns them. It only recognizes “woome”, “veemo”,
 ;;   “love” and “many”.
 ;;   ┌────
-;;   │ (defun ghelp-dummy-backend (&optional prompt symbol)
+;;   │ (defun ghelp-dummy-backend (&optional prompt data)
 ;;   │   "Demo. Prompt behavior depends on PROMPT.
-;;   │ If SYMBOL non-nil, just describe it, otherwise get a symbol by
-;;   │ prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
+;;   │ 
+;;   │ DATA is a plist of form 
+;;   │ 
+;;   │     (:symbol SYMBOL :marker MARKER)
+;;   │ 
+;;   │ SYMBOL is either nil or a string. If SYMBOL is non-nil, then it
+;;   │ is the symbol we want documentation for. If SYMBOL is nil, we
+;;   │ should get the symbol from the user ourselves. MARKER is
+;;   │ the point marker at where the user requested for documentation.
+;;   │ 
+;;   │ Return (SYMBOL ENTRY-LIST), where SYMBOL
 ;;   │ is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ;;   │ ENTRY is (TITLE DOC)."
 ;;   │   (let* ((default-symbol (symbol-name (symbol-at-point)))
-;;   │          (symbol (or symbol
+;;   │          (symbol (or (plist-get data :symbol)
 ;;   │                      (ghelp-maybe-prompt prompt default-symbol
 ;;   │                        (ghelp-completing-read ; I can also use ‘completing-read’
 ;;   │                         default-symbol
@@ -188,10 +210,10 @@
 ;; 
 ;;   <file:./ghelp-helpful-800.gif>
 ;;
-;;; Commentary end
+;; Commentary end
 
 ;;; Developer:
-;;
+
 ;;;; Usage
 
 ;; Use these functions:
@@ -236,26 +258,36 @@
 
 ;;;; History
 
-;; ‘ghelp-history’ is specialized for ghelp:
-
-;; 1. new nodes are always added to the end of the history
-;; 2. when looking for a particular node, you can optionally
-;; move that node to the end of the history. See
-;; ‘ghelp-history--find-and-move’.
-;; 3. pushing into history moves point to the end of the history.
+;; Each major mode has its page history. A history has a list of
+;; nodes. The list is sorted from newest node to oldest node (so we
+;; can remove oldest node when necessary). The nodes themselves
+;; constructs a doubly-linked list. This list is sorted in logical
+;; order -- every time when ghelp creates a new page, it inserts the
+;; page after the last viewed page. For example, suppose this is our
+;; history:
+;;
+;;    A - B - C - D
+;;
+;; And the last viewed page is C. Now, if the user requested for the
+;; documentation for E, E is inserted after C and before D:
+;;
+;;    A - B - C - E - D
+;;
 
 ;;;; Code structure
 
 ;; ghelp is made of several parts: ghelp-describe, ghelp-history,
-;; ghelp-page, ghelp-entry, ghelp-backend. They don’t know the detail of
-;; each other and only communicate by “exposed” functions. You can find
-;; the “exposed” functions on the beginning of each section.
+;; ghelp-page, ghelp-entry, and ghelp-backend. They don’t know the
+;; detail of each other and only communicate by “exposed” functions.
+;; You can find the “exposed” functions on the beginning of each
+;; section.
 
 ;;; Code:
 ;;
 
 (require 'cl-lib)
 (require 'pcase)
+(require 'seq)
 
 ;;; Global
 
@@ -271,12 +303,14 @@ ARGS is passed to ‘describe-function’."
   (interactive)
   (ghelp-describe-as-in 'emacs-lisp-mode 'force-prompt))
 
-(defvar ghelp-map (let ((map (make-sparse-keymap)))
-                (define-key map (kbd "C-h") #'ghelp-describe)
-                (define-key map (kbd "C-p") #'ghelp-describe-at-point)
-                (define-key map "h" #'help-command)
-                (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
-                map)
+(defvar ghelp-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-h") #'ghelp-describe)
+    (define-key map (kbd "C-p") #'ghelp-describe-at-point)
+    (define-key map "h" #'help-command)
+    (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
+    (define-key map "r" #'ghelp-resume)
+    map)
   "Map for ghelp. Bind this map to some entry key sequence.")
 
 ;;; Etc
@@ -288,7 +322,7 @@ ARGS is passed to ‘describe-function’."
                                  ;; of through ‘ghelp-describe’), e.g,
                                  ;; ‘helpful-key’.
                                  (helpful-mode . emacs-lisp-mode))
-  "An alist specifing how major modes shares documentations.
+  "An alist specifying how major modes shares documentations.
 
 An entry like (major-mode1 . major-mode2) makes MAJOR-MODE1
 share the history and backends of MAJOR-MODE2.
@@ -343,8 +377,7 @@ If MODE doesn’t point to anything, return itself."
   "Resume to last opened page."
   (interactive)
   (let* ((mode (ghelp--resolve-mode (ghelp-get-mode)))
-         (history (ghelp--get-history mode))
-         (page (ghelp-history--current-page history)))
+         (page (ghelp-history--current-page mode)))
     (if page
         (let ((win (display-buffer page)))
           (when help-window-select
@@ -432,6 +465,167 @@ DATA, if non-nil, is the value of ‘ghelp-page-data’."
   (interactive)
   (ghelp-describe 'no-prompt))
 
+;;; History
+;;
+;; Functions:
+;; - ‘ghelp-history--of’
+;; - ‘ghelp-history--push’
+;; - ‘ghelp-history--page-at’
+;; - ‘ghelp-history--set-current-page’
+;; - ‘ghelp-history--current-page’
+
+;;;; Variables
+
+(defvar ghelp-history-max-length 50
+  "Maximum length of each history.")
+
+(defvar ghelp-history-alist nil
+  "A list of (major-mode . history).
+HISTORY is the history of documentation queries.")
+
+(cl-defstruct ghelp-history
+  "History for a major mode.
+
+ - nodes :: A list of ‘ghelp-history-node’.
+ - current :: The last viewed node."
+  nodes
+  current)
+
+(cl-defstruct ghelp-history-node
+  "A node in a ‘ghelp-history’.
+
+ - mode   :: Major mode.
+ - symbol :: Symbol that the documentation describes.
+ - buffer :: The ghelp buffer containing the documentation.
+ - prev   :: Previous node.
+ - next   :: next node."
+  mode
+  symbol
+  buffer
+  prev
+  next)
+
+(defun ghelp-history--set-nodes (nodes mode)
+  "Set nodes of the history of MODE to NODES."
+  (setf (ghelp-history-nodes (alist-get mode ghelp-history-alist))
+        nodes))
+
+(defun ghelp-history--set-current (node mode)
+  "Set current node of the history of MODE to NODE."
+  (setf (ghelp-history-current (alist-get mode ghelp-history-alist))
+        node))
+
+;;;; Private
+
+(defun ghelp-history--symbol-node (symbol history)
+  "Return the node describing SYMBOL in HISTORY or nil."
+  ;; Remember that SYMBOL is string.
+  (seq-find (lambda (node) (equal (ghelp-history-node-symbol node) symbol))
+            (ghelp-history-nodes history)))
+
+(defun ghelp-history--remove-node (node history)
+  "Remove NODE from HISTORY and destroy NODE."
+  (let ((buf (ghelp-history-node-buffer node))
+        (prev (ghelp-history-node-prev node))
+        (next (ghelp-history-ndoe-next node)))
+    (when (buffer-live-p (buffer-kill buf)))
+    (when prev (setf (ghelp-history-node-next prev) next))
+    (when next (setf (ghelp-history-node-prev next) prev)))
+  (setf (ghelp-history-nodes history)
+        (remq node (ghelp-history-nodes history))))
+
+(defun ghelp-history--trim (history)
+  "Remove old nodes from HISTORY if it’s too long.
+HiSTORY is too long when its length exceeds
+‘ghelp-history-max-length’."
+  (let ((nodes (ghelp-history-nodes history)))
+    (when (> (length nodes) ghelp-history-max-length)
+      (dolist (node (seq-subseq nodes ghelp-history-max-length))
+        (ghelp-history--remove-node node history)))))
+
+(defun ghelp-history--insert-after (node1 node2 history)
+  "Insert NODE1 after NODE2 in HISTORY."
+  (push node1 (ghelp-history-nodes history))
+  (let ((after-node2 (ghelp-history-node-next node2)))
+    (setf (ghelp-history-node-next node2) node1)
+    (setf (ghelp-history-node-next node1) after-node2)
+    (setf (ghelp-history-node-prev node1) node2)
+    (when after-node2
+      (setf (ghelp-history-node-prev after-node2) node1))))
+
+(defun ghelp-history--insert-before (node1 node2 history)
+  "Insert NODE1 before NODE2 in HISTORY."
+  (push node1 (ghelp-history-nodes history))
+  (let ((before-node2 (ghelp-history-node-prev node2)))
+    (setf (ghelp-history-node-prev node2) node1)
+    (setf (ghelp-history-node-prev node1) before-node2)
+    (setf (ghelp-history-node-next node1) node2)
+    (when before-node2
+      (setf (ghelp-history-node-next before-node2) node1))))
+
+(defun ghelp-history--bring-node-to-front (node history)
+  "Make NODE the latest node in HISTORY."
+  (let ((nodes (ghelp-history-nodes history)))
+    (setf (ghelp-history-nodes history)
+          (cons node (remq node nodes)))))
+
+;;;; Public
+
+(defun ghelp-history--of (mode)
+  "Return history of MODE."
+  (or (alist-get mode ghelp-history-alist)
+      ;; TODO remove workaround
+      ;; needed for all version before 27.1
+      (let ((h (make-ghelp-history :nodes nil :current nil)))
+        (setf (alist-get mode ghelp-history-alist) h)
+        h)))
+
+(defun ghelp-history--push (page symbol mode)
+  "Push PAGE for SYMBOL of MODE to the history of MODE."
+  (let* ((node (make-ghelp-history-node :buffer page
+                                        :symbol symbol
+                                        :mode mode))
+         (history (ghelp-history--of mode))
+         (current (ghelp-history-current history)))
+    (if current (ghelp-history--insert-after node current history)
+      (setf (ghelp-history-nodes history) (list node)))
+    (setf (ghelp-history-current history) node)))
+
+(defun ghelp-history--page-at (where symbol mode)
+  "Return the page at POS in MODE.
+POS is WHERE SYMBOL
+POS can be
+    :at SYMBOL      meaning return the page for SYMBOL, or
+    :after SYMBOL   meaning return the page after the one for
+                    SYMBOL, or
+    :before SYMBOL  meaning return the page before the one for
+                    SYMBOL."
+  (when-let* ((history (ghelp-history--of mode))
+              (node (ghelp-history--symbol-node symbol history))
+              (real-node (pcase where
+                           (:at node)
+                           (:after (ghelp-history-node-next node))
+                           (:before (ghelp-history-node-prev node)))))
+    (ghelp-history-node-buffer real-node)))
+
+(defun ghelp-history--set-current-page (where symbol mode)
+  "Set the current page of MODE to the page describing SYMBOL.
+Specifically, set the current page of the history of MODE.
+WHERE is the same as in ‘ghelp-history--page-at’.
+If such page doesn’t exist, do nothing."
+  (let* ((history (ghelp-history--of mode))
+         (node (ghelp-history--symbol-node symbol history))
+         (real-node (pcase where
+                      (:at node)
+                      (:after (ghelp-history-node-next node))
+                      (:before (ghelp-history-node-prev node)))))
+    (when node (setf (ghelp-history-current history) real-node))))
+
+(defun ghelp-history--current-page (mode)
+  "Return the current page for MODE."
+  (ghelp-history-node-buffer
+   (ghelp-history-current
+    (ghelp-history--of mode))))
 
 ;;; Entry
 ;;
@@ -612,7 +806,6 @@ The plist includes these values:
 
     :symbol    A string; the documentation is about this symbol.
     :mode      The major mode; it is used by ‘ghelp--show-page’.
-    :history   The history object that this page is in.
     :marker    The marker at the point where the user requested
                documentation of this symbol.
 
@@ -620,8 +813,8 @@ NOTE: Backends should not use this variable, instead, use
 ‘ghelp-get-page-data’.")
 
 (defun ghelp-get-page-data ()
-  "Return a plist that’s identical to ‘ghelp-page-data’
-which contains useful information like symbol and marker."
+  "Return a plist that’s identical to ‘ghelp-page-data’.
+The plist contains useful information like symbol and marker."
   (if (derived-mode-p 'ghelp-page-mode)
       (copy-tree ghelp-page-data)
     (error "Not in a ghelp page")))
@@ -634,39 +827,44 @@ which contains useful information like symbol and marker."
 
 (defun ghelp-page--header-line-format ()
   "Return back and forward button for the current page."
-  (pcase-let (((cl-struct ghelp-history nodes point)
-               (ghelp-page--history)))
+  (let ((history (ghelp-page--history))
+        (symbol (plist-get ghelp-page-data :symbol)))
     (concat (propertize "  " 'display '(space :width (10)))
             ;; [back]
             (propertize
              (ghelp--make-button "<<back" #'ghelp-back)
-             'face (if (eq point (1- (length nodes)))
-                       '(:foreground "gray" :inherit ghelp-header-button)
-                     'ghelp-header-button)
+             'face 'ghelp-header-button
              'mouse-face 'highlight)
             (propertize "  " 'display '(space :width (20)))
-            (plist-get ghelp-page-data :symbol)
+            symbol
             (propertize "  " 'display '(space :width (20)))
             ;; [forward]
             (propertize
              (ghelp--make-button "forward>>" #'ghelp-forward)
-             'face (if (eq point 0)
-                       '(:foreground "gray" :inherit ghelp-header-button)
-                     'ghelp-header-button)
+             'face 'ghelp-header-button
              'mouse-face 'highlight))))
 
 ;;;;; Commands
 
-(defun ghelp-back (&optional count)
-  "Go back one or COUNT pages."
-  (interactive "p")
-  (switch-to-buffer (ghelp-history--back (ghelp-page--history)
-                                         (or count 1))))
+(defun ghelp-back ()
+  "Go back one page."
+  (interactive)
+  (let* ((symbol (plist-get ghelp-page-data :symbol))
+         (mode (plist-get ghelp-page-data :mode))
+         (page (ghelp-history--page-at :before symbol mode)))
+    (when page
+      (ghelp-history--set-current-page :before symbol mode)
+      (switch-to-buffer page))))
 
-(defun ghelp-forward (&optional count)
-  "Go forward one or COUNT pages."
-  (interactive "p")
-  (ghelp-back (- count)))
+(defun ghelp-forward ()
+  "Go forward one page."
+  (interactive)
+  (let* ((symbol (plist-get ghelp-page-data :symbol))
+         (mode (plist-get ghelp-page-data :mode))
+         (page (ghelp-history--page-at :after symbol mode)))
+    (when page
+      (ghelp-history--set-current-page :after symbol mode)
+      (switch-to-buffer page))))
 
 (defun ghelp-switch-to-page ()
   "Switch to a page in history."
@@ -676,18 +874,16 @@ which contains useful information like symbol and marker."
                   "Switch to: "
                   (ghelp-history--to-candidates history)
                   nil t))
-         (page (ghelp-history--goto history symbol)))
+         (mode (plist-get ghelp-page-data :mode))
+         (page (ghelp-history--page-at :at symbol mode)))
     (switch-to-buffer page)))
 
 ;;;;; Functions
 
 (defun ghelp--generate-new-page (mode symbol)
-  "Generate a new page for MODE (major mode) and SYMBOL and return it.
-
-!! This function doesn’t set variable ‘ghelp-page--history’. Be aware !!"
+  "Generate a new page for MODE (major mode) and SYMBOL and return it."
   (with-current-buffer (generate-new-buffer
                         (ghelp--page-name-from mode symbol))
-    ;; TODO setup buffer
     (ghelp-page-mode)
     (plist-put ghelp-page-data :symbol symbol)
     (plist-put ghelp-page-data :mode mode)
@@ -700,15 +896,12 @@ which contains useful information like symbol and marker."
   "Return the page for MODE (major mode) and SYMBOL.
 Assume a history is available for MODE, else error.
 POINT is the point of the symbol."
-  (let* ((history (ghelp--get-history mode))
-         ;; find and move the page to the end of history
-         (page (ghelp-history--find-and-move history symbol)))
-    (or page
-        (prog1 (setq page (ghelp--generate-new-page mode symbol))
-          (with-current-buffer page
-            (setq ghelp-page-data
-                  (plist-put ghelp-page-data :history history)))
-          (ghelp-history--push page mode symbol history)))))
+  (let* ((page (ghelp-history--page-at :at symbol mode)))
+    (if page
+        (ghelp-history--set-current-page :at symbol mode)
+      (setq page (ghelp--generate-new-page mode symbol))
+      (ghelp-history--push page symbol mode))
+    page))
 
 (defun ghelp-page-clear ()
   "Clear PAGE."
@@ -772,8 +965,7 @@ If FOLD non-nil, fold the entry after insertion."
 
 (defun ghelp-page--history ()
   "Return non-nil ‘ghelp-page-history’ or error."
-  (or (plist-get ghelp-page-data :history)
-      (error "No ‘ghelp-page--history’ found in current buffer")))
+  (ghelp-history--of (plist-get ghelp-page-data :mode)))
 
 (defun ghelp--show-page (entry-list data &optional window)
   "Display page with ENTRY-LIST in WINDOW (if non-nil).
