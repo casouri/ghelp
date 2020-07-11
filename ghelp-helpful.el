@@ -40,6 +40,24 @@
                 (ghelp-cl-type-describe-symbol symbol)))))
         (list (symbol-name symbol) entry-list)))))
 
+(defun ghelp-helpful-key (key-sequence)
+  "Describe KEY-SEQUENCE."
+  (interactive
+   (list (read-key-sequence "Press key: ")))
+  (let ((sym (key-binding key-sequence)))
+    (cond
+     ((null sym)
+      (user-error "No command is bound to %s"
+                  (key-description key-sequence)))
+     ((commandp sym)
+      (ghelp--describe-1
+       'no-prompt `(:symbol ,sym :mode emacs-lisp-mode
+                            :marker ,(point-marker))))
+     (t
+      (user-error "%s is bound to %s which is not a command"
+                  (key-description key-sequence)
+                  sym)))))
+
 (defun ghelp-helpful-callable (symbol)
   (when (fboundp symbol)
     (let ((buf (helpful--buffer symbol t)))
