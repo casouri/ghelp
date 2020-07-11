@@ -318,10 +318,11 @@ If MODE doesn’t point to anything, return itself."
 
 (defun ghelp-get-mode ()
   "Return major mode for use."
-  (or ghelp-page--mode
-      (ghelp--resolve-mode
-       (or ghelp--overwrite-mode
-           major-mode))))
+  (ghelp--resolve-mode
+   (if (derived-mode-p 'ghelp-page-mode)
+       (plist-get ghelp-page-data :mode)
+     (or ghelp--overwrite-mode
+         major-mode))))
 
 ;;; Commands
 
@@ -353,7 +354,9 @@ If MODE doesn’t point to anything, return itself."
 (defun ghelp-refresh ()
   "Refresh current page."
   (interactive)
-  (ghelp--describe-1 t ghelp-page--symbol))
+  (if (derived-mode-p 'ghelp-page-mode)
+      (ghelp--describe-1 'no-prompt (copy-tree ghelp-page-data))
+    (user-error "Not in a ghelp page")))
 
 (defun ghelp-completing-read (default-symbol &rest args)
   "‘completing-read’ with two improvements.
@@ -399,23 +402,29 @@ symbol, nil means only prompt when there is no valid symbol at point."
   (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
     (ghelp--describe-1 prompt)))
 
-(defun ghelp--describe-1 (&optional prompt symbol)
+(defun ghelp--describe-1 (&optional prompt data)
   "Describe symbol.
 
 PROMPT can be 'no-prompt, 'force-prompt or nil. 'no-prompt means
 don’t prompt for symbol; 'foce-prompt means always prompt for
 symbol, nil means only prompt when there is no valid symbol at point.
 
-If SYMBOL is non-nil, describe SYMBOL. SYMBOL is intended for
-internal use."
+DATA, if non-nil, is the value of ‘ghelp-page-data’."
   (let* ((mode (ghelp-get-mode))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
     (if backend
-        (pcase-let* ((`(,symbol ,entry-list)
-                      (funcall backend prompt symbol)))
-          (ghelp--show-page symbol entry-list mode window))
+        (pcase-let*
+            ;; If data is nil, we are requesting documentation from
+            ;; the working buffer; if data non-nil, we are refreshing
+            ;; a ghelp buffer.
+            ((data (or data `(:marker ,(point-marker))))
+             (`(,symbol ,entry-list)
+              (funcall backend prompt (copy-tree data))))
+          (setq data (plist-put data :symbol symbol))
+          (setq data (plist-put data :mode mode))
+          (ghelp--show-page entry-list data window))
       (user-error "No backend found for %s" major-mode))))
 
 (defun ghelp-describe-at-point ()
@@ -704,8 +713,8 @@ Each entry is a ‘ghelp-entry’.")
 ;; - ‘ghelp-folded-entry’
 ;; - ‘ghelp-entry’
 ;; - ‘ghelp--show-page’
-;; - ‘ghelp-page--mode’
-;; - ‘ghelp-page--symbol’
+;; - ‘ghelp-page-data’
+;; - ‘ghelp-get-page-data’
 
 ;;;;; Modes
 
@@ -735,6 +744,10 @@ Each entry is a ‘ghelp-entry’.")
 
 ;;;;; Variables
 
+(defvar ghelp-enable-header-line t
+  "Whether to display information on the header line.
+Changeling this variable doesn’t affect existing ghelp pages.")
+
 (defface ghelp-entry (let ((display t)
                            (atts '(:inherit nil)))
                        `((,display . ,atts)))
@@ -754,14 +767,33 @@ Each entry is a ‘ghelp-entry’.")
   "Face for the title of an entry in a documentation."
   :group 'ghelp)
 
-(defvar-local ghelp-page--history nil
-  "A pointer point back to the history containing this page.")
+(defface ghelp-header-button (let ((display t)
+                                   (atts '(:slant normal :weight normal
+                                                  :inherit
+                                                  info-header-node)))
+                               `((,display . ,atts)))
+  "Face for back and forward button in header line."
+  :group 'ghelp)
 
-(defvar-local ghelp-page--mode nil
-  "Mode that was passed to ‘ghelp-show-page’.")
+(defvar-local ghelp-page-data nil
+  "A plist that stores information about the documentation.
+The plist includes these values:
 
-(defvar-local ghelp-page--symbol nil
-  "Symbol that was passed to ‘ghelp--show-page’.")
+    :symbol    A string; the documentation is about this symbol.
+    :mode      The major mode; it is used by ‘ghelp--show-page’.
+    :history   The history object that this page is in.
+    :marker    The marker at the point where the user requested
+               documentation of this symbol.
+
+NOTE: Backends should not use this variable, instead, use
+‘ghelp-get-page-data’.")
+
+(defun ghelp-get-page-data ()
+  "Return a plist that’s identical to ‘ghelp-page-data’
+which contains useful information like symbol and marker."
+  (if (derived-mode-p 'ghelp-page-mode)
+      (copy-tree ghelp-page-data)
+    (error "Not in a ghelp page")))
 
 ;; (defvar ghelp-entry-map
 ;;   (let ((map (make-sparse-keymap)))
@@ -769,28 +801,28 @@ Each entry is a ‘ghelp-entry’.")
 ;;     map)
 ;;   "Keymap activated when point is in an entry.")
 
-;; FIXME not working
-(defvar ghelp-page--header-line-format
-  `(:eval
-    (pcase-let (((cl-struct ghelp-history
-                            nodes
-                            point)
-                 ghelp-page--history))
-      (concat " "
-              ;; [back]
-              (unless (eq point (1- (length nodes)))
-                (propertize
-                 (ghelp--make-button "[back]" #'ghelp-back)
-                 face info-header-node
-                 mouse-face highlight))
-              " "
-              ;; [forward]
-              (unless (eq point 0)
-                (propertize
-                 (ghelp--make-button "[forward]" #'ghelp-forward)
-                 face info-header-node
-                 mouse-face highlight)))))
-  "Setup current page’s header line.")
+(defun ghelp-page--header-line-format ()
+  "Return back and forward button for the current page."
+  (pcase-let (((cl-struct ghelp-history nodes point)
+               (ghelp-page--history)))
+    (concat (propertize "  " 'display '(space :width (10)))
+            ;; [back]
+            (propertize
+             (ghelp--make-button "<<back" #'ghelp-back)
+             'face (if (eq point (1- (length nodes)))
+                       '(:foreground "gray" :inherit ghelp-header-button)
+                     'ghelp-header-button)
+             'mouse-face 'highlight)
+            (propertize "  " 'display '(space :width (20)))
+            (plist-get ghelp-page-data :symbol)
+            (propertize "  " 'display '(space :width (20)))
+            ;; [forward]
+            (propertize
+             (ghelp--make-button "forward>>" #'ghelp-forward)
+             'face (if (eq point 0)
+                       '(:foreground "gray" :inherit ghelp-header-button)
+                     'ghelp-header-button)
+             'mouse-face 'highlight))))
 
 ;;;;; Commands
 
@@ -826,13 +858,16 @@ Each entry is a ‘ghelp-entry’.")
                         (ghelp--page-name-from mode symbol))
     ;; TODO setup buffer
     (ghelp-page-mode)
-    (setq ghelp-page--symbol symbol
-          ghelp-page--mode mode)
+    (plist-put ghelp-page-data :symbol symbol)
+    (plist-put ghelp-page-data :mode mode)
+    (when ghelp-enable-header-line
+      (setq header-line-format
+            '((:eval (ghelp-page--header-line-format)))))
     (current-buffer)))
 
 (defun ghelp-get-page-or-create (mode symbol)
   "Return the page for MODE (major mode) and SYMBOL.
-Assume a history is avaliable for MODE, else error.
+Assume a history is available for MODE, else error.
 POINT is the point of the symbol."
   (let* ((history (ghelp--get-history mode))
          ;; find and move the page to the end of history
@@ -840,7 +875,8 @@ POINT is the point of the symbol."
     (or page
         (prog1 (setq page (ghelp--generate-new-page mode symbol))
           (with-current-buffer page
-            (setq ghelp-page--history history))
+            (setq ghelp-page-data
+                  (plist-put ghelp-page-data :history history)))
           (ghelp-history--push page mode symbol history)))))
 
 (defun ghelp-page-clear ()
@@ -896,19 +932,26 @@ If FOLD non-nil, fold the entry after insertion."
 ;; Helpers
 
 (defun ghelp--make-button (text fn)
-  "Return a clickable TEXT that invokes FN when clicked by <mouse-1>."
+  "Return a clickable TEXT that invokes FN when clicked by mouse-1."
   (propertize text 'keymap (let ((map (make-sparse-keymap)))
-                             (define-key map [down-mouse-1] fn)
+                             (define-key map [header-line mouse-1] fn)
+                             (define-key map [mode-line mouse-1] fn)
+                             (define-key map [mouse-1] fn)
                              map)))
 
 (defun ghelp-page--history ()
   "Return non-nil ‘ghelp-page-history’ or error."
-  (or ghelp-page--history
+  (or (plist-get ghelp-page-data :history)
       (error "No ‘ghelp-page--history’ found in current buffer")))
 
-(defun ghelp--show-page (symbol entry-list mode &optional window)
-  "Display page for SYMBOL with ENTRY-LIST in MODE, in WINDOW if non-nil."
-  (let ((page (ghelp-get-page-or-create mode symbol)))
+(defun ghelp--show-page (entry-list data &optional window)
+  "Display page with ENTRY-LIST in WINDOW (if non-nil).
+DATA contains useful information like symbol and mode, see
+‘ghelp-page-data’ for more."
+  (let* ((mode (plist-get data :mode))
+         (marker (plist-get data :marker))
+         (symbol (plist-get data :symbol))
+         (page (ghelp-get-page-or-create mode symbol)))
     (with-current-buffer page
       (ghelp-page-clear)
       (ghelp-page-insert-entry-list entry-list t)
@@ -916,8 +959,9 @@ If FOLD non-nil, fold the entry after insertion."
        (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold)
-      (setq-local ghelp-page--mode mode)
-      (setq-local ghelp-page--symbol symbol))
+      (setq ghelp-page-data (plist-put ghelp-page-data :symbol symbol))
+      (setq ghelp-page-data (plist-put ghelp-page-data :marker marker))
+      (setq ghelp-page-data (plist-put ghelp-page-data :mode mode)))
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
@@ -949,14 +993,23 @@ MODE can be a major mode symbol or a list of it."
 
 ;;; Dummy
 
-(defun ghelp-dummy-backend (&optional prompt symbol)
+(defun ghelp-dummy-backend (&optional prompt data)
   "Demo. Prompt behavior depends on PROMPT.
-If SYMBOL non-nil, just describe it, otherwise get a symbol by
-prompting or guessing. Return (SYMBOL ENTRY-LIST), where SYMBOL
+
+DATA is a plist of form 
+
+    (:symbol SYMBOL :marker MARKER)
+
+SYMBOL is either nil or a string. If SYMBOL is non-nil, then it
+is the symbol we want documentation for. If SYMBOL is nil, we
+should get the symbol from the user ourselves. MARKER is
+the point marker at where the user requested for documentation.
+
+Return (SYMBOL ENTRY-LIST), where SYMBOL
 is a string, and ENTRY-LIST is a list (ENTRY ...), where each
 ENTRY is (TITLE DOC)."
   (let* ((default-symbol (symbol-name (symbol-at-point)))
-         (symbol (or symbol
+         (symbol (or (plist-get data :symbol)
                      (ghelp-maybe-prompt prompt default-symbol
                        (ghelp-completing-read ; I can also use ‘completing-read’
                         default-symbol

@@ -11,32 +11,34 @@
 (require 'helpful)
 (require 'ghelp-builtin)
 
-(defun ghelp-helpful-backend (&optional prompt symbol)
-  (let* ((mode (ghelp-get-mode))
-         (default-symbol (symbol-name (symbol-at-point)))
-         (symbol (or symbol
-                     (intern-soft
+(defun ghelp-helpful-backend (&optional prompt data)
+  (let* ((default-symbol (symbol-name (symbol-at-point)))
+         (symbol (intern-soft
+                  (or (plist-get data :symbol)
                       (ghelp-maybe-prompt prompt default-symbol
-                        (ghelp-completing-read ; I can also use ‘completing-read’
+                        (ghelp-completing-read
                          default-symbol
                          obarray
                          (lambda (s) (let ((s (intern-soft s)))
                                        (or (fboundp s)
                                            (boundp s)
                                            (facep s)
-                                           (cl--class-p s)))))))))
-         (callable-doc (ghelp-helpful-callable symbol))
-         (variable-doc (ghelp-helpful-variable symbol))
-         (entry-list (remove
-                      nil
-                      (list
-                       (when callable-doc
-                         (list (format "%s (callable)" symbol) callable-doc))
-                       (when variable-doc
-                         (list (format "%s (variable)" symbol) variable-doc))
-                       (ghelp-face-describe-symbol symbol)
-                       (ghelp-cl-type-describe-symbol symbol)))))
-    (list symbol entry-list)))
+                                           (cl--class-p s))))))))))
+    ;; This way refreshing works with buffer-local variables.
+    (with-current-buffer (marker-buffer (plist-get data :marker))
+      (let* ((callable-doc (ghelp-helpful-callable symbol))
+             (variable-doc (ghelp-helpful-variable symbol))
+             (entry-list
+              (remove
+               nil
+               (list
+                (when callable-doc
+                  (list (format "%s (callable)" symbol) callable-doc))
+                (when variable-doc
+                  (list (format "%s (variable)" symbol) variable-doc))
+                (ghelp-face-describe-symbol symbol)
+                (ghelp-cl-type-describe-symbol symbol)))))
+        (list (symbol-name symbol) entry-list)))))
 
 (defun ghelp-helpful-callable (symbol)
   (when (fboundp symbol)
@@ -47,7 +49,7 @@
         (cl-letf (((symbol-function 'helpful--button)
                    #'ghelp-helpful--button))
           (helpful-update))
-        ;; insert an ending newline
+        ;; insert an ending line
         (let ((inhibit-read-only t))
           (goto-char (point-max))
           (insert "\n"))
@@ -55,21 +57,24 @@
           (kill-buffer buf))))))
 
 (defun ghelp-helpful-variable (symbol)
-  (when (helpful--variable-p symbol)
-    (let ((buf (helpful--buffer symbol nil)))
-      (with-current-buffer buf
-        ;; use our hacked ‘helpful--button’ to insert
-        ;; hacked describe buttons
-        (cl-letf (((symbol-function 'helpful--button)
-                   #'ghelp-helpful--button))
-          (helpful-update))
-        ;; insert an ending newline
-        (let ((inhibit-read-only t))
-          (goto-char (point-max))
-          (insert "\n"))
-        (prog1 (let ((yank-excluded-properties nil))
-                 (buffer-string))
-          (kill-buffer buf))))))
+  ;; For some reason ‘helpful-update’ jumps to the definition
+  ;; of the variable.
+  (save-excursion
+    (when (helpful--variable-p symbol)
+      (let ((buf (helpful--buffer symbol nil)))
+        (with-current-buffer buf
+          ;; use our hacked ‘helpful--button’ to insert
+          ;; hacked describe buttons
+          (cl-letf (((symbol-function 'helpful--button)
+                     #'ghelp-helpful--button))
+            (helpful-update))
+          ;; insert an ending newline
+          (let ((inhibit-read-only t))
+            (goto-char (point-max))
+            (insert "\n"))
+          (prog1 (let ((yank-excluded-properties nil))
+                   (buffer-string))
+            (kill-buffer buf)))))))
 
 ;;; Modified helpful.el code
 
@@ -98,18 +103,10 @@
 
 (defun ghelp-helpful--describe (button)
   "Describe the symbol that this BUTTON represents."
-  (let* ((sym (button-get button 'symbol))
-         (doc-v (ghelp-helpful-variable sym))
-         (doc-f (ghelp-helpful-callable sym))
-         (ev (when doc-v (list
-                          (format "%s (variable)" sym)
-                          doc-v)))
-         (ef (when doc-f (list
-                          (format "%s (callable)" sym)
-                          doc-f)))
-         (entry-list (remove nil (list ev ef))))
-    (ghelp--show-page sym entry-list ghelp-page--mode
-                      (selected-window))))
+  (let* ((sym (button-get button 'symbol)))
+    (ghelp--describe-1
+     'no-prompt (plist-put (plist-put (ghelp-get-page-data) :symbol sym)
+                           :marker (point-marker)))))
 
 (define-button-type 'ghelp-helpful-describe-exactly-button
   'action #'ghelp-helpful--describe
