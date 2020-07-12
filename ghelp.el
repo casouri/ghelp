@@ -626,20 +626,21 @@ Return nil if didn’t find the page, or the page is killed."
   "Set the current page of MODE to the page describing SYMBOL.
 Specifically, set the current page of the history of MODE.
 WHERE is the same as in ‘ghelp-history--page-at’.
-If such page doesn’t exist, do nothing."
-  (let* ((history (ghelp-history--of mode))
-         (node (ghelp-history--symbol-node symbol history))
-         (real-node (pcase where
-                      (:at node)
-                      (:after (ghelp-history-node-next node))
-                      (:before (ghelp-history-node-prev node)))))
-    (when node (setf (ghelp-history-current history) real-node))))
+If such page doesn’t exist, do nothing and return nil."
+  (when-let* ((history (ghelp-history--of mode))
+              (node (ghelp-history--symbol-node symbol history))
+              (real-node (pcase where
+                           (:at node)
+                           (:after (ghelp-history-node-next node))
+                           (:before (ghelp-history-node-prev node)))))
+    (setf (ghelp-history-current history) real-node)))
 
 (defun ghelp-history--current-page (mode)
-  "Return the current page for MODE."
-  (let* ((history (ghelp-history--of mode))
-         (node (ghelp-history-current history))
-         (page (ghelp-history-node-buffer node)))
+  "Return the current page for MODE.
+If can’t find one, return nil."
+  (when-let* ((history (ghelp-history--of mode))
+              (node (ghelp-history-current history))
+              (page (ghelp-history-node-buffer node)))
     ;; We fix the error behind the scene.
     (if (buffer-live-p page)
         page
