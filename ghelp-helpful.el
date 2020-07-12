@@ -62,11 +62,7 @@
   (when (fboundp symbol)
     (let ((buf (helpful--buffer symbol t)))
       (with-current-buffer buf
-        ;; use our hacked ‘helpful--button’ to insert
-        ;; hacked describe buttons
-        (cl-letf (((symbol-function 'helpful--button)
-                   #'ghelp-helpful--button))
-          (helpful-update))
+        (helpful-update)
         ;; insert an ending line
         (let ((inhibit-read-only t))
           (goto-char (point-max))
@@ -81,11 +77,7 @@
     (when (helpful--variable-p symbol)
       (let ((buf (helpful--buffer symbol nil)))
         (with-current-buffer buf
-          ;; use our hacked ‘helpful--button’ to insert
-          ;; hacked describe buttons
-          (cl-letf (((symbol-function 'helpful--button)
-                     #'ghelp-helpful--button))
-            (helpful-update))
+          (helpful-update)
           ;; insert an ending newline
           (let ((inhibit-read-only t))
             (goto-char (point-max))
@@ -94,45 +86,26 @@
                    (buffer-string))
             (kill-buffer buf)))))))
 
-;;; Modified helpful.el code
+;;; Advices
 
-;; hack this function to insert our hacked buttons
-(defun ghelp-helpful--button (text type &rest properties)
-  ;; `make-text-button' mutates our string to add properties. Copy
-  ;; TEXT to prevent mutating our arguments, and to support 'pure'
-  ;; strings, which are read-only.
-  (setq text (substring-no-properties text))
-  (apply #'make-text-button
-         text nil
-         :type (cond ((eq type 'helpful-describe-button)
-                      'ghelp-helpful-describe-button)
-                     ((eq type 'helpful-describe-exactly-button)
-                      'ghelp-helpful-describe-exactly-button)
-                     (t type))
-         properties))
-
-;; hacked buttons invoke ghelp functions instead of helpful ones
-
-(define-button-type 'ghelp-helpful-describe-button
-  'action #'ghelp-helpful--describe
-  'symbol nil
-  'follow-link t
-  'help-echo "Describe this symbol")
-
-(defun ghelp-helpful--describe (button)
+(defun ghelp-helpful--describe-advice (oldfn button)
   "Describe the symbol that this BUTTON represents."
-  (let* ((sym (button-get button 'symbol)))
-    (ghelp--describe-1
-     'no-prompt (plist-put (plist-put (ghelp-get-page-data) :symbol sym)
-                           :marker (point-marker)))))
+  (if (derived-mode-p 'ghelp-page-mode)
+      (let* ((sym (button-get button 'symbol)))
+        (ghelp--describe-1
+         'no-prompt (plist-put (plist-put (ghelp-get-page-data) :symbol sym)
+                               :marker (point-marker))))
+    (funcall oldfn button)))
 
-(define-button-type 'ghelp-helpful-describe-exactly-button
-  'action #'ghelp-helpful--describe
-  'symbol nil
-  'callable-p nil
-  'follow-link t
-  'help-echo "Describe this symbol")
+(defun ghelp-helpful--update-advice (oldfn)
+  (if (derived-mode-p 'ghelp-page-mode)
+      (ghelp-refresh)
+    (funcall oldfn)))
 
+(advice-add 'helpful-update :around #'ghelp-helpful--update-advice)
+(advice-add 'helpful--describe :around #'ghelp-helpful--describe-advice)
+(advice-add 'helpful--describe-exactly
+            :around #'ghelp-helpful--describe-advice)
 
 (provide 'ghelp-helpful)
 
