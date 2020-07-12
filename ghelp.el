@@ -648,6 +648,12 @@ If can’t find one, return nil."
       (ghelp-history--remove-node node history)
       (ghelp-history--current-page mode))))
 
+(defun ghelp-history--symbols (mode)
+  "Return a list of symbols (string) that the history for MODE contains."
+  (when-let* ((history (ghelp-history--of mode))
+              (nodes (ghelp-history-nodes history)))
+    (mapcar #'ghelp-history-node-symbol nodes)))
+
 ;;; Entry
 ;;
 ;; Functions:
@@ -890,12 +896,11 @@ The plist contains useful information like symbol and marker."
 (defun ghelp-switch-to-page ()
   "Switch to a page in history."
   (interactive)
-  (let* ((history (ghelp-page--history))
+  (let* ((mode (plist-get ghelp-page-data :mode))
          (symbol (completing-read
                   "Switch to: "
-                  (ghelp-history--to-candidates history)
+                  (ghelp-history--symbols mode)
                   nil t))
-         (mode (plist-get ghelp-page-data :mode))
          (page (ghelp-history--page-at :at symbol mode)))
     (switch-to-buffer page)))
 
