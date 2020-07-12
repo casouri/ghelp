@@ -527,12 +527,18 @@ HISTORY is the history of documentation queries.")
   "Remove NODE from HISTORY and destroy NODE."
   (let ((buf (ghelp-history-node-buffer node))
         (prev (ghelp-history-node-prev node))
-        (next (ghelp-history-ndoe-next node)))
-    (when (buffer-live-p (buffer-kill buf)))
+        (next (ghelp-history-node-next node)))
+    (when (buffer-live-p (kill-buffer buf)))
     (when prev (setf (ghelp-history-node-next prev) next))
     (when next (setf (ghelp-history-node-prev next) prev)))
   (setf (ghelp-history-nodes history)
-        (remq node (ghelp-history-nodes history))))
+        (remq node (ghelp-history-nodes history)))
+  ;; We are deleting the current node.
+  (when (eq node (ghelp-history-current history))
+    (setf (ghelp-history-current history)
+          (or (ghelp-history-node-prev node)
+              (ghelp-history-node-next node)
+              (car (ghelp-history-nodes history))))))
 
 (defun ghelp-history--trim (history)
   "Remove old nodes from HISTORY if it’s too long.
@@ -599,14 +605,22 @@ POS can be
     :after SYMBOL   meaning return the page after the one for
                     SYMBOL, or
     :before SYMBOL  meaning return the page before the one for
-                    SYMBOL."
+                    SYMBOL.
+
+Return nil if didn’t find the page, or the page is killed."
   (when-let* ((history (ghelp-history--of mode))
               (node (ghelp-history--symbol-node symbol history))
               (real-node (pcase where
                            (:at node)
                            (:after (ghelp-history-node-next node))
-                           (:before (ghelp-history-node-prev node)))))
-    (ghelp-history-node-buffer real-node)))
+                           (:before (ghelp-history-node-prev node))))
+              (buffer (ghelp-history-node-buffer real-node)))
+    (if (buffer-live-p buffer)
+        buffer
+      ;; If user tries to go to prev/next page but that page is
+      ;; killed, we fix the history behind the scene.
+      (ghelp-history--remove-node real-node history)
+      nil)))
 
 (defun ghelp-history--set-current-page (where symbol mode)
   "Set the current page of MODE to the page describing SYMBOL.
@@ -623,9 +637,15 @@ If such page doesn’t exist, do nothing."
 
 (defun ghelp-history--current-page (mode)
   "Return the current page for MODE."
-  (ghelp-history-node-buffer
-   (ghelp-history-current
-    (ghelp-history--of mode))))
+  (let* ((history (ghelp-history--of mode))
+         (node (ghelp-history-current history))
+         (page (ghelp-history-node-buffer node)))
+    ;; We fix the error behind the scene.
+    (if (buffer-live-p page)
+        page
+      (message "Last viewed page is killed, showing the second last.")
+      (ghelp-history--remove-node node history)
+      (ghelp-history--current-page mode))))
 
 ;;; Entry
 ;;
