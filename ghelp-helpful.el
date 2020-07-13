@@ -10,35 +10,33 @@
 
 (require 'helpful)
 (require 'ghelp-builtin)
+(require 'pcase)
 
-(defun ghelp-helpful-backend (&optional prompt data)
-  (let* ((default-symbol (symbol-name (symbol-at-point)))
-         (symbol (intern-soft
-                  (or (plist-get data :symbol)
-                      (ghelp-maybe-prompt prompt default-symbol
-                        (ghelp-completing-read
-                         default-symbol
-                         obarray
-                         (lambda (s) (let ((s (intern-soft s)))
-                                       (or (fboundp s)
-                                           (boundp s)
-                                           (facep s)
-                                           (cl--class-p s))))))))))
+(defun ghelp-helpful-backend (command data)
+  "Helpful backend."
+  (pcase command
+    ('symbol (completing-read "Symbol: " obarray
+                              (lambda (s)
+                                (let ((s (intern-soft s)))
+                                  (or (fboundp s)
+                                      (boundp s)
+                                      (facep s)
+                                      (cl--class-p s))))))
     ;; This way refreshing works with buffer-local variables.
-    (with-current-buffer (marker-buffer (plist-get data :marker))
-      (let* ((callable-doc (ghelp-helpful-callable symbol))
-             (variable-doc (ghelp-helpful-variable symbol))
-             (entry-list
-              (remove
-               nil
-               (list
-                (when callable-doc
-                  (list (format "%s (callable)" symbol) callable-doc))
-                (when variable-doc
-                  (list (format "%s (variable)" symbol) variable-doc))
-                (ghelp-face-describe-symbol symbol)
-                (ghelp-cl-type-describe-symbol symbol)))))
-        (list (symbol-name symbol) entry-list)))))
+    ('doc (with-current-buffer (marker-buffer (plist-get data :marker))
+            (let* ((symbol (intern-soft (plist-get data :symbol)))
+                   (callable-doc (ghelp-helpful-callable symbol))
+                   (variable-doc (ghelp-helpful-variable symbol))
+                   (entry-list (list
+                                (when callable-doc
+                                  (list (format "%s (callable)" symbol)
+                                        callable-doc))
+                                (when variable-doc
+                                  (list (format "%s (variable)" symbol)
+                                        variable-doc))
+                                (ghelp-face-describe-symbol symbol)
+                                (ghelp-cl-type-describe-symbol symbol))))
+              (remove nil entry-list))))))
 
 (defun ghelp-helpful-key (key-sequence)
   "Describe KEY-SEQUENCE."

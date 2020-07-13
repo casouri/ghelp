@@ -10,21 +10,26 @@
 ;; Unlike Emacs Help, ghelp works for more major-modes and is extensible
 ;; with backends.
 ;; 
-;; [☞ Screencasts]
+;; *Features*
+;; • Unified entry command
+;; • Unified UI
+;; • Documentation history, you can search in history, go back/forward.
 ;; 
-;; Currently supported backends:
+;; *Currently supported backends*
 ;; • [helpful]
 ;; • [eglot]
 ;; • [geiser]
 ;; 
+;; [☞ Screencasts]
 ;; 
-;; [☞ Screencasts] <https://github.com/casouri/ghelp#screencasts>
 ;; 
 ;; [helpful] <https://github.com/Wilfred/helpful>
 ;; 
 ;; [eglot] <https://github.com/joaotavora/eglot>
 ;; 
 ;; [geiser] <https://www.nongnu.org/geiser/>
+;; 
+;; [☞ Screencasts] <https://github.com/casouri/ghelp#screencasts>
 ;; 
 ;; 
 ;; 1 Install & load
@@ -51,6 +56,10 @@
 ;;    `ghelp-resume'             Reopen last page                          
 ;;    `ghelp-describe-elisp'     Describe a Emacs symbol                   
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 
+;;   Normally `ghelp-describe' shows documentation of the symbol at point,
+;;   If you want to query for a symbol (e.g., with completion), type `C-u'
+;;   then `ghelp-describe'.
 ;; 
 ;;   With helpful.el backend:
 ;; 
@@ -111,101 +120,83 @@
 ;; 5 Write a backend
 ;; ═════════════════
 ;; 
-;;   A backend is a function that gets the symbol, find the documentation
-;;   and return them to ghelp.
+;;   A backend is a function that takes two arguments `COMMAND' and `DATA'.
 ;; 
-;;   The backend function should look like this:
-;; 
+;;   If `COMMAND' is `'symbol', return a string representing the symbol
+;;   that the user wants documentation for. In this case, `DATA' is a plist
+;;   of form
 ;;   ┌────
-;;   │ (defun my-backend (&optional prompt data &rest _)
-;;   │   (let* ((symbol (or (plist-get data :symbol)
-;;   │                      (ghelp-maybe-prompt prompt (symbol-name
-;;   │                                                  (symbol-at-point))
-;;   │                        (completing-read "Symbol: " '("A" "B" "C")))))
-;;   │          (doc (get-documentation symbol)))
-;;   │     (symbol (("Entry 1" "Documentation body")
-;;   │              ("Entry 2" "Documentation body")))))
+;;   │ (:marker MARKER)
 ;;   └────
+;;   where `MARKER' is the marker at the point where user invoked
+;;   `ghelp-describe'. (Be a good kid and don’t modify `MARKER'.)
 ;; 
-;;   `DATA' is a plist of form:
+;;   If `COMMAND' is `'doc', return the documentation for `SYMBOL', where
+;;   `SYMBOL' is from `DATA':
 ;;   ┌────
 ;;   │ (:symbol SYMBOL :marker MARKER)
 ;;   └────
-;;   `SYMBOL' is either `nil' or a string. If `SYMBOL' is `non-nil', then
-;;   it is the symbol we want documentation for. If `SYMBOL' is `nil', you
-;;   should get the symbol from the user. `MARKER' is the point marker at
-;;   where the user requested for documentation.
-;; 
-;;   1. Resolve symbol. If `SYMBOL' is `non-nil', just use it. If it is
-;;      `nil', you need to either guess for one or prompt the user to type
-;;      in the symbol. `PROMPT' represents the prompting strategy, there
-;;      are three strategies:
-;;   - `'no-prompt': Never prompt user. We guess the symbol or fail.
-;;   - `'force-prompt': Must prompt user.
-;;   - `nil': If we can guess the symbol, don’t show prompt, if not, prompt
-;;     for a symbol.
-;; 
-;;   You can guess the symbol by
-;;   ┌────
-;;   │ (save-excursion
-;;   │   (goto-char (plist-get data :marker))
-;;   │   (symbol-name (symbol-at-point)))
-;;   └────
-;;   and prompt for a symbol by `completing-read'. Ghelp provides a helpful
-;;   macro `ghelp-maybe-prompt' to handle `PROMPT' for you (as shown in the
-;;   example).
-;; 
-;;   The return values is `(SYMBOL ((TITLE BODY) ...))'. SYMBOL is just the
-;;   symbol (again, a string). `TITLE' is the title of the documentation,
-;;   `BODY' is documentation body (has to end with newline). You can have
-;;   multiple documentations if you wish. Maybe the symbol can mean
-;;   multiple things. In Emacs Lisp, a symbol can be a function, a
-;;   variable, a face, etc, at the same time.
+;;   Returned documentation shoule be a string ending with a newline.
 ;; 
 ;;   Below is an example backend that gets the symbol and then the
 ;;   documentation and returns them. It only recognizes “woome”, “veemo”,
-;;   “love” and “many”.
+;;   “love” and “tank”.
 ;;   ┌────
-;;   │ (defun ghelp-dummy-backend (&optional prompt data)
-;;   │   "Demo. Prompt behavior depends on PROMPT.
-;;   │ 
-;;   │ DATA is a plist of form 
-;;   │ 
-;;   │     (:symbol SYMBOL :marker MARKER)
-;;   │ 
-;;   │ SYMBOL is either nil or a string. If SYMBOL is non-nil, then it
-;;   │ is the symbol we want documentation for. If SYMBOL is nil, we
-;;   │ should get the symbol from the user ourselves. MARKER is
-;;   │ the point marker at where the user requested for documentation.
-;;   │ 
-;;   │ Return (SYMBOL ENTRY-LIST), where SYMBOL
-;;   │ is a string, and ENTRY-LIST is a list (ENTRY ...), where each
-;;   │ ENTRY is (TITLE DOC)."
-;;   │   (let* ((default-symbol (symbol-name (symbol-at-point)))
-;;   │          (symbol (or (plist-get data :symbol)
-;;   │                      (ghelp-maybe-prompt prompt default-symbol
-;;   │                        (ghelp-completing-read ; I can also use ‘completing-read’
-;;   │                         default-symbol
-;;   │                         '("woome" "veemo" "love" "and" "peace" "many")))))
-;;   │          ;; get documentation
-;;   │          ;; note that title doesn’t need ending newline but doc does
-;;   │          (entry-list (pcase symbol
-;;   │                        ;;           title   documentation
-;;   │                        ("woome" '(("Woome"  "Woome!\n")))
-;;   │                        ("veemo" '(("Veemo"  "Veemo!\n")))
-;;   │                        ("love"  '(("Love"   "Love is good.\n")))
-;;   │                        ;; multiple entries
-;;   │                        ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-;;   │     (list symbol entry-list)))
+;;   │ (defun ghelp-dummy-backend (command data)
+;;   │   (pcase command
+;;   │     ('symbol (completing-read "Symbol: "
+;;   │                               '("woome" "veemo" "love" "tank")))
+;;   │     ('doc (pcase (plist-get data :symbol)
+;;   │             ("woome" "Woome!!\n")
+;;   │             ("veemo" "Veemo!!\n")
+;;   │             ("love" "Peace!!\n")
+;;   │             ("tank" "TANK! THE! BEST!\n")))))
 ;;   └────
+;;   You can try this out by typing `M-x ghelp-dummy RET'.
 ;; 
-;;   Register your backend by
+;;   Once you have a backend, register it by
 ;;   ┌────
 ;;   │ (ghelp-register-backend 'major-mode #'your-backend-function)
 ;;   └────
 ;; 
 ;; 
-;; 6 Screencasts
+;; 6 Advanced backend
+;; ══════════════════
+;; 
+;; 6.1 Returned documentation
+;; ──────────────────────────
+;; 
+;;   Besides a string, the returned documentation could carry more
+;;   information.
+;; 
+;;   First, it can be a list of form `(TITLE BODY)' where `TITLE' is the
+;;   title for your documentation, and `BODY' is the body of your
+;;   documentation. This way you can use a title other than the symbol
+;;   name.
+;; 
+;;   Second, you can return multiple documentations by returning a list
+;;   `((TITLE BODY)...)', where each element is a `(TITLE BODY)' form.
+;; 
+;; 
+;; 6.2 Use buttons in your documentation
+;; ─────────────────────────────────────
+;; 
+;;   You can use buttons in your documentation as long they are text
+;;   buttons made by text properties, rather than overlay buttons. After
+;;   all your are returning a string, which doesn’t carry overlays.
+;; 
+;;   However, one problem might arise if the command invoked by your button
+;;   needs some information, like the symbol that this documentation page
+;;   is describing. You can get that by `(ghelp-get-page-data)', which
+;;   returns a plist of form
+;;   ┌────
+;;   │ (:symbol SYMBOL :mode MODE :marker MARKER)
+;;   └────
+;;   `SYMBOL' and `MARKER' are the same as before, `MODE' is the major
+;;   mode.
+;; 
+;; 
+;; 7 Screencasts
 ;; ═════════════
 ;; 
 ;;   *Eglot*
@@ -245,32 +236,24 @@
 
 ;;;; Page anatomy
 
-;; <entry>
-;; <newline>
-;; <entry>
-;; <newline>
-;; ...
-
-;;;; Entry anatomy
-
-;; <title>
-;; <text>
+;; A page is made of a series of entries. Each entry is made of a
+;; title and the documentation body.
 
 ;;;; Backends
 
 ;; Each major mode has one backend that can be accessed through
-;; ‘ghelp-describe’ function. The backend gets the symbol, finds
-;; the documentation and returns the symbol and documentation.
+;; ‘ghelp-describe’ function.  Multiple major modes could share
+;; the same backend (and history).
 
 ;;;; History
 
-;; Each major mode has its page history. A history has a list of
-;; nodes. The list is sorted from newest node to oldest node (so we
-;; can remove oldest node when necessary). The nodes themselves
-;; constructs a doubly-linked list. This list is sorted in logical
-;; order -- every time when ghelp creates a new page, it inserts the
-;; page after the last viewed page. For example, suppose this is our
-;; history:
+;; Each major mode has a page history. Though multiple major mode
+;; could share a same history. A history has a list of nodes. The list
+;; is sorted from newest node to oldest node (so we can remove oldest
+;; node when necessary). The nodes themselves constructs a
+;; doubly-linked list. This list is sorted in logical order -- every
+;; time when ghelp creates a new page, it inserts the page after the
+;; last viewed page. For example, suppose this is our history:
 ;;
 ;;    A - B - C - D
 ;;
@@ -285,8 +268,8 @@
 ;; ghelp is made of several parts: ghelp-describe, ghelp-history,
 ;; ghelp-page, ghelp-entry, and ghelp-backend. They don’t know the
 ;; detail of each other and only communicate by “exposed” functions.
-;; You can find the “exposed” functions on the beginning of each
-;; section.
+;; (At least that’s what I attempted to do.) You can find the
+;; “exposed” functions on the beginning of each section.
 
 ;;; Code:
 ;;
@@ -397,40 +380,6 @@ If MODE doesn’t point to anything, return itself."
       (ghelp--describe-1 'no-prompt (copy-tree ghelp-page-data))
     (user-error "Not in a ghelp page")))
 
-(defun ghelp-completing-read (default-symbol &rest args)
-  "‘completing-read’ with two improvements.
-
-1. Compose prompt with DEFAULT-SYMBOL (string or nil) as
-   “Describe (default DEFAULT-SYMBOL): ”.
-2. If gets empty string, return DEFAULT-SYMBOL.
-
-\(fn DEFAULT-SYMBOL COLLECTION &optional PREDICATE REQUIRE-MATCH INITIAL-INPUT HIST DEF INHERIT-INPUT-METHOD)"
-  (let* ((prompt (format "Describe%s: "
-                         (if default-symbol
-                             (format " (default %s)" default-symbol)
-                           "")))
-         (symbol (apply #'completing-read prompt args)))
-    (if (equal symbol "") default-symbol symbol)))
-
-(defmacro ghelp-maybe-prompt (prompt default-symbol prompt-form)
-  "Get symbol according to prompting strategy PROMPT.
-Return a string.
-
-Execute the default prompting strategy for ghelp:
- 1. If PROMPT is 'no-prompt, we absolutely don’t show prompt and use
-    DEFAULT-SYMBOL.
- 2. If PROMPT is 'force-prompt, we always prompt for symbol.
- 3. If PROMPT is nil, we try to use DEFAULT-SYMBOL, but if it’s nil,
-    we prompt the user for one.
-
-PROMPT-FORM is the form for prompting for a symbol."
-  (declare (indent 2))
-  `(cond ((eq ,prompt 'no-prompt)
-          ,default-symbol)
-         ((and (eq ,prompt nil) ,default-symbol)
-          ,default-symbol)
-         (t ,prompt-form)))
-
 (defun ghelp-describe (prompt)
   "Describe symbol.
 
@@ -453,18 +402,33 @@ DATA, if non-nil, is the value of ‘ghelp-page-data’."
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window))))
-    (if backend
-        (pcase-let*
-            ;; If data is nil, we are requesting documentation from
-            ;; the working buffer; if data non-nil, we are refreshing
-            ;; a ghelp buffer.
-            ((data (or data `(:marker ,(point-marker))))
-             (`(,symbol ,entry-list)
-              (funcall backend prompt (copy-tree data))))
-          (setq data (plist-put data :symbol symbol))
-          (setq data (plist-put data :mode mode))
-          (ghelp--show-page entry-list data window))
-      (user-error "No backend found for %s" major-mode))))
+    (if (not backend)
+        (user-error "No backend found for %s" major-mode)
+      (let (symbol doc)
+        ;; If data non-nil, we are refreshing a ghelp buffer, then we
+        ;; go to step 2 to get the documentation; if not, we need to
+        ;; get the symbol first.
+        (when (not data)
+          (setq data `(:marker ,(point-marker)))
+          (setq symbol (let* ((sym (when-let ((sym (symbol-at-point)))
+                                     (symbol-name sym))))
+                         (pcase prompt
+                           ('no-prompt sym)
+                           ('force-prompt (funcall backend 'symbol data))
+                           ('nil (or sym
+                                     (funcall backend 'symbol data))))))
+          (when (not symbol)
+            (user-error "No symbol at point"))
+          (setq data (plist-put data :symbol symbol)))
+        ;; Request for documentation.
+        (setq doc (funcall backend 'doc data))
+        (setq data (plist-put data :mode mode))
+        ;; Handle different kinds of doc.
+        (cond ((stringp doc)
+               (setq doc `((,symbol ,doc))))
+              ((stringp (car doc))
+               (setq doc (list doc))))
+        (ghelp--show-page doc data window)))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -1048,37 +1012,38 @@ MODE can be a major mode symbol or a list of it."
 
 ;;; Dummy
 
-(defun ghelp-dummy-backend (&optional prompt data)
+(defun ghelp-dummy-backend (command data)
   "Demo. Prompt behavior depends on PROMPT.
 
-DATA is a plist of form 
+If COMMAND is 'symbol, return a string representing the symbol
+that the user wants documentation for. DATA is a plist of form
+
+    (:marker MARKER)
+
+where MARKER is the marker at the point where user invoked
+‘ghelp-describe’.
+
+If COMMAND is 'doc, return the documentation for SYMBOL, where
+SYMBOL is from DATA:
 
     (:symbol SYMBOL :marker MARKER)
 
-SYMBOL is either nil or a string. If SYMBOL is non-nil, then it
-is the symbol we want documentation for. If SYMBOL is nil, we
-should get the symbol from the user ourselves. MARKER is
-the point marker at where the user requested for documentation.
+Returned documentation is a string ending with a newline."
+  (pcase command
+    ('symbol (completing-read "Symbol: "
+                              '("woome" "veemo" "love" "tank")))
+    ('doc (pcase (plist-get data :symbol)
+            ("woome" "Woome!!\n")
+            ("veemo" "Veemo!!\n")
+            ("love" "Peace!!\n")
+            ("tank" "TANK! THE! BEST!\n")))))
 
-Return (SYMBOL ENTRY-LIST), where SYMBOL
-is a string, and ENTRY-LIST is a list (ENTRY ...), where each
-ENTRY is (TITLE DOC)."
-  (let* ((default-symbol (symbol-name (symbol-at-point)))
-         (symbol (or (plist-get data :symbol)
-                     (ghelp-maybe-prompt prompt default-symbol
-                       (ghelp-completing-read ; I can also use ‘completing-read’
-                        default-symbol
-                        '("woome" "veemo" "love" "and" "peace" "many")))))
-         ;; get documentation
-         ;; note that title doesn’t need ending newline but doc does
-         (entry-list (pcase symbol
-                       ;;           title   documentation
-                       ("woome" '(("Woome"  "Woome!\n")))
-                       ("veemo" '(("Veemo"  "Veemo!\n")))
-                       ("love"  '(("Love"   "Love is good.\n")))
-                       ;; multiple entries
-                       ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    (list symbol entry-list)))
+(defun ghelp-dummy ()
+  "Demonstrate the dummy backend."
+  (interactive)
+  (ghelp-describe-as-in 'dummy-mode))
+
+(ghelp-register-backend 'dummy-mode #'ghelp-dummy-backend)
 
 ;;; Setup
 

@@ -2,12 +2,17 @@
 
 This package provides a generic help system similar to Emacs Help. Unlike Emacs Help, ghelp works for more major-modes and is extensible with backends.
 
-[[https://github.com/casouri/ghelp#screencasts][☞ Screencasts]]
+*Features*
+- Unified entry command
+- Unified UI
+- Documentation history, you can search in history, go back/forward.
 
-Currently supported backends:
+*Currently supported backends*
 - [[https://github.com/Wilfred/helpful][helpful]]
 - [[https://github.com/joaotavora/eglot][eglot]]
 - [[https://www.nongnu.org/geiser/][geiser]]
+
+[[https://github.com/casouri/ghelp#screencasts][☞ Screencasts]]
 
 * Install & load
 Download the files and add them to load path.
@@ -27,6 +32,8 @@ Without ~use-package~:
 | ~gehlp-describe-at-point~ | Describe symbol at point (without prompt) |
 | ~ghelp-resume~            | Reopen last page                          |
 | ~ghelp-describe-elisp~ | Describe a Emacs symbol |
+
+Normally ~ghelp-describe~ shows documentation of the symbol at point, If you want to query for a symbol (e.g., with completion), type =C-u= then ~ghelp-describe~.
 
 With helpful.el backend:
 
@@ -63,81 +70,56 @@ Normally if you call ~ghelp-describe-function~ it selects the backends to use by
 to look up Emacs Lisp symbols regardless of which major mode you are currently in.
 
 * Write a backend
-A backend is a function that gets the symbol, find the documentation and return them to ghelp.
+A backend is a function that takes two arguments ~COMMAND~ and ~DATA~.
 
-The backend function should look like this:
-
+If ~COMMAND~ is ~'symbol~, return a string representing the symbol that the user wants documentation for. In this case, ~DATA~ is a plist of form
 #+begin_src emacs-lisp
-(defun my-backend (&optional prompt data &rest _)
-  (let* ((symbol (or (plist-get data :symbol)
-                     (ghelp-maybe-prompt prompt (symbol-name
-                                                 (symbol-at-point))
-                       (completing-read "Symbol: " '("A" "B" "C")))))
-         (doc (get-documentation symbol)))
-    (symbol (("Entry 1" "Documentation body")
-             ("Entry 2" "Documentation body")))))
+(:marker MARKER)
 #+end_src
+where ~MARKER~ is the marker at the point where user invoked ~ghelp-describe~. (Be a good kid and don’t modify ~MARKER~.)
 
-~DATA~ is a plist of form:
-#+begin_src emacs-lisp
-(:symbol SYMBOL :marker MARKER)
-#+end_src
-~SYMBOL~ is either ~nil~ or a string. If ~SYMBOL~ is ~non-nil~, then it is the symbol we want documentation for. If ~SYMBOL~ is ~nil~, you should get the symbol from the user. ~MARKER~ is the point marker at where the user requested for documentation.
-
-1. Resolve symbol. If ~SYMBOL~ is ~non-nil~, just use it. If it is ~nil~, you need to either guess for one or prompt the user to type in the symbol. ~PROMPT~ represents the prompting strategy, there are three strategies:
-- ~'no-prompt~: Never prompt user. We guess the symbol or fail.
-- ~'force-prompt~: Must prompt user.
-- ~nil~: If we can guess the symbol, don’t show prompt, if not, prompt for a symbol.
-
-You can guess the symbol by 
-#+begin_src emacs-lisp
-(save-excursion
-  (goto-char (plist-get data :marker))
-  (symbol-name (symbol-at-point)))
-#+end_src
-and prompt for a symbol by ~completing-read~. Ghelp provides a helpful macro ~ghelp-maybe-prompt~ to handle ~PROMPT~ for you (as shown in the example).
-
-The return values is ~(SYMBOL ((TITLE BODY) ...))~. SYMBOL is just the symbol (again, a string). ~TITLE~ is the title of the documentation, ~BODY~ is documentation body (has to end with newline). You can have multiple documentations if you wish. Maybe the symbol can mean multiple things. In Emacs Lisp, a symbol can be a function, a variable, a face, etc, at the same time.
-
-Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “many”.
+If ~COMMAND~ is ~'doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is from ~DATA~:
 #+BEGIN_SRC emacs-lisp
-(defun ghelp-dummy-backend (&optional prompt data)
-  "Demo. Prompt behavior depends on PROMPT.
-
-DATA is a plist of form 
-
-    (:symbol SYMBOL :marker MARKER)
-
-SYMBOL is either nil or a string. If SYMBOL is non-nil, then it
-is the symbol we want documentation for. If SYMBOL is nil, we
-should get the symbol from the user ourselves. MARKER is
-the point marker at where the user requested for documentation.
-
-Return (SYMBOL ENTRY-LIST), where SYMBOL
-is a string, and ENTRY-LIST is a list (ENTRY ...), where each
-ENTRY is (TITLE DOC)."
-  (let* ((default-symbol (symbol-name (symbol-at-point)))
-         (symbol (or (plist-get data :symbol)
-                     (ghelp-maybe-prompt prompt default-symbol
-                       (ghelp-completing-read ; I can also use ‘completing-read’
-                        default-symbol
-                        '("woome" "veemo" "love" "and" "peace" "many")))))
-         ;; get documentation
-         ;; note that title doesn’t need ending newline but doc does
-         (entry-list (pcase symbol
-                       ;;           title   documentation
-                       ("woome" '(("Woome"  "Woome!\n")))
-                       ("veemo" '(("Veemo"  "Veemo!\n")))
-                       ("love"  '(("Love"   "Love is good.\n")))
-                       ;; multiple entries
-                       ("many"  '(("Many1"  "I’m ONE.\n") ("Many2" "I’m TWO.\n"))))))
-    (list symbol entry-list)))
+(:symbol SYMBOL :marker MARKER)
 #+END_SRC
+Returned documentation shoule be a string ending with a newline.
 
-Register your backend by
+Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “tank”.
+#+BEGIN_SRC emacs-lisp
+(defun ghelp-dummy-backend (command data)
+  (pcase command
+    ('symbol (completing-read "Symbol: "
+                              '("woome" "veemo" "love" "tank")))
+    ('doc (pcase (plist-get data :symbol)
+            ("woome" "Woome!!\n")
+            ("veemo" "Veemo!!\n")
+            ("love" "Peace!!\n")
+            ("tank" "TANK! THE! BEST!\n")))))
+#+END_SRC
+You can try this out by typing ~M-x ghelp-dummy RET~.
+
+Once you have a backend, register it by
 #+BEGIN_SRC emacs-lisp
 (ghelp-register-backend 'major-mode #'your-backend-function)
 #+END_SRC
+
+* Advanced backend
+
+** Returned documentation
+Besides a string, the returned documentation could carry more information.
+
+First, it can be a list of form ~(TITLE BODY)~ where ~TITLE~ is the title for your documentation, and ~BODY~ is the body of your documentation. This way you can use a title other than the symbol name.
+
+Second, you can return multiple documentations by returning a list ~((TITLE BODY)...)~, where each element is a ~(TITLE BODY)~ form.
+
+** Use buttons in your documentation
+You can use buttons in your documentation as long they are text buttons made by text properties, rather than overlay buttons. After all your are returning a string, which doesn’t carry overlays.
+
+However, one problem might arise if the command invoked by your button needs some information, like the symbol that this documentation page is describing. You can get that by ~(ghelp-get-page-data)~, which returns a plist of form
+#+begin_src emacs-lisp
+(:symbol SYMBOL :mode MODE :marker MARKER)
+#+end_src
+~SYMBOL~ and ~MARKER~ are the same as before, ~MODE~ is the major mode.
 
 * Screencasts
 *Eglot*
