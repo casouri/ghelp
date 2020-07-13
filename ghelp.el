@@ -288,7 +288,7 @@
 (defun ghelp-describe-elisp ()
   "Describe Emacs symbol."
   (interactive)
-  (ghelp-describe-as-in 'emacs-lisp-mode 'force-prompt))
+  (ghelp-describe-with-mode 'force-prompt 'emacs-lisp-mode))
 
 (defvar ghelp-map
   (let ((map (make-sparse-keymap)))
