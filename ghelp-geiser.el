@@ -12,27 +12,33 @@
 
 (require 'geiser-doc)
 
-(defun ghelp-geiser-backend (&optional prompt symbol)
+(defun ghelp-geiser-backend (command data)
   "Backend for geiser."
-  (let* ((default-symbol (geiser--symbol-at-point))
-         (symbol (ghelp-maybe-prompt prompt
-                     default-symbol
-                   (geiser-completion--read-symbol
-                    (format "Symbol (%s): " default-symbol)
-                    (symbol-name default-symbol)))))
-    (when symbol
-      (let* ((impl geiser-impl--implementation)
-             (module (geiser-doc--module (geiser-eval--get-module)
-                                         impl)))
-        (let ((ds (geiser-doc--get-docstring symbol module)))
-          (if (or (not ds) (not (listp ds)))
-              (message "No documentation available for '%s'" symbol)
-            `(,(symbol-name symbol)
-              ;; an entry
-              ((,(symbol-name symbol) ;; title
-                ,(with-temp-buffer ;; body
+  (pcase command
+    ('symbol (geiser-completion--read-symbol "Symbol: "))
+    ('doc (let* ((symbol (intern-soft (plist-get data :symbol)))
+                 (impl geiser-impl--implementation)
+                 (module (geiser-doc--module (geiser-eval--get-module)
+                                             impl)))
+            (ghelp-geiser--doc-symbol-advice symbol module impl)))))
+
+(defun ghelp-geiser--doc-symbol-advice (symbol &optional module impl)
+  (let ((doc (let ((ds (geiser-doc--get-docstring symbol module)))
+               (if (or (not ds) (not (listp ds)))
+                   nil
+                 (with-temp-buffer
                    (geiser-doc--render-docstring ds symbol module impl)
-                   (buffer-string)))))))))))
+                   (buffer-string)))))
+        (sym-name (symbol-name symbol)))
+    (if (not (derived-mode-p 'ghelp-page-mode))
+        doc
+      (let ((mode (plist-get (ghelp-get-page-data) :mode)))
+        (ghelp--show-page `((,sym-name ,doc))
+                          `(:symbol ,sym-name :mode ,mode)
+                          (selected-window))))))
+
+(advice-add 'geiser-doc-symbol
+            :override #'ghelp-geiser--doc-symbol-advice)
 
 (ghelp-register-backend 'geiser-repl-mode #'ghelp-geiser-backend)
 
