@@ -123,21 +123,16 @@
 ;;   A backend is a function that takes two arguments `COMMAND' and `DATA'.
 ;; 
 ;;   If `COMMAND' is `'symbol', return a string representing the symbol
-;;   that the user wants documentation for. In this case, `DATA' is a plist
-;;   of form
-;;   ┌────
-;;   │ (:marker MARKER)
-;;   └────
-;;   where `MARKER' is the marker at the point where user invoked
-;;   `ghelp-describe'. (Be a good kid and don’t modify `MARKER'.)
+;;   that the user wants documentation for.
 ;; 
 ;;   If `COMMAND' is `'doc', return the documentation for `SYMBOL', where
 ;;   `SYMBOL' is from `DATA':
 ;;   ┌────
 ;;   │ (:symbol SYMBOL :marker MARKER)
 ;;   └────
-;;   Returned documentation shoule be a string ending with a newline.
-;;   Return nil if no documentation is found.
+;;   And `MARKER' is the marker at the point where user invoked
+;;   `ghelp-describe'. Returned documentation should be a string ending
+;;   with a newline. Return nil if no documentation is found.
 ;; 
 ;;   Below is an example backend that gets the symbol and then the
 ;;   documentation and returns them. It only recognizes “woome”, “veemo”,
@@ -195,6 +190,15 @@
 ;;   └────
 ;;   `SYMBOL' and `MARKER' are the same as before, `MODE' is the major
 ;;   mode.
+;; 
+;; 
+;; 6.3 Use a phony major mode
+;; ──────────────────────────
+;; 
+;;   Normally each backend is tied to an actual major mode. But if you want
+;;   to write a backend that doesn’t associate with any major mode, like a
+;;   dictionary, you can use `ghelp-describe-with-mode', and use
+;;   `dictionary' as your “major mode”.
 ;; 
 ;; 
 ;; 7 Screencasts
@@ -281,13 +285,6 @@
 
 ;;; Global
 
-(defun ghelp-describe-as-in (mode &rest args)
-  "Return a describe function that thinks it’s in MODE.
-ARGS is passed to ‘describe-function’."
-  (let ((ghelp--overwrite-mode mode))
-    (ignore ghelp--overwrite-mode)
-    (apply #'ghelp--describe-1 args)))
-
 (defun ghelp-describe-elisp ()
   "Describe Emacs symbol."
   (interactive)
@@ -298,7 +295,7 @@ ARGS is passed to ‘describe-function’."
     (define-key map (kbd "C-h") #'ghelp-describe)
     (define-key map (kbd "C-p") #'ghelp-describe-at-point)
     (define-key map "h" #'help-command)
-    (define-key map "e" #'ghelp-describe-as-in-emacs-lisp-mode)
+    (define-key map "e" #'ghelp-describe-elisp)
     (define-key map "r" #'ghelp-resume)
     map)
   "Map for ghelp. Bind this map to some entry key sequence.")
@@ -337,16 +334,12 @@ If MODE doesn’t point to anything, return itself."
             mode (alist-get mode ghelp-mode-share-alist)))
     prev-mode))
 
-(defvar-local ghelp--overwrite-mode nil
-  "Overwrite ‘major-mode’ with this mode.")
-
 (defun ghelp-get-mode ()
   "Return major mode for use."
   (ghelp--resolve-mode
    (if (derived-mode-p 'ghelp-page-mode)
        (plist-get ghelp-page-data :mode)
-     (or ghelp--overwrite-mode
-         major-mode))))
+     major-mode)))
 
 ;;; Commands
 
@@ -383,55 +376,73 @@ If MODE doesn’t point to anything, return itself."
 
 (defun ghelp-describe (prompt)
   "Describe symbol.
-
-PROMPT can be 'no-prompt, 'force-prompt or nil. 'no-prompt means
-don’t prompt for symbol; 'foce-prompt means always prompt for
-symbol, nil means only prompt when there is no valid symbol at point."
+When called interactively, use prefix argument to force prompt."
   (interactive "p")
   (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
-    (ghelp--describe-1 prompt)))
+    (ghelp-describe-1 prompt nil)))
 
-(defun ghelp--describe-1 (&optional prompt data)
+(defun ghelp-describe-with-mode (prompt mode)
+  "Describe symbol for MODE.
+
+PROMPT can be 'no-prompt, 'force-prompt or nil:
+
+no-prompt     means don’t prompt for symbol;
+force-prompt  means always prompt for symbol;
+nil           means only prompt when there is no valid symbol at point.
+
+MODE is the major mode of the symbol your want to describe."
+  (ghelp-describe-1 prompt `(:mode ,mode)))
+
+(defun ghelp-describe-1 (prompt data)
   "Describe symbol.
 
-PROMPT can be 'no-prompt, 'force-prompt or nil. 'no-prompt means
-don’t prompt for symbol; 'foce-prompt means always prompt for
-symbol, nil means only prompt when there is no valid symbol at point.
+PROMPT is the same as in ‘ghelp-describe-with-mode’.
 
-DATA, if non-nil, is the value of ‘ghelp-page-data’."
-  (let* ((mode (ghelp-get-mode))
+DATA is a plist of form (:symbol SYMBOL :mode MODE :marker MARKER).
+SYMBOL is the symbol we want to describe, MODE is the major mode,
+MARKER is the marker at where user requested for documentation.
+
+If SYMBOL is nil, we try to guess or prompt for the symbol.
+If MODE is nil, we use current buffer’s major mode.
+If MARKER is nil, we use the marker at point."
+  (interactive "p")
+  (let* ((mode (or (plist-get data :mode) (ghelp-get-mode)))
+         (symbol (plist-get data :symbol))
+         (marker (or (plist-get data :marker) (point-marker)))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
-                   (selected-window))))
-    (if (not backend)
-        (user-error "No backend found for %s" major-mode)
-      (let (symbol doc)
-        ;; If data non-nil, we are refreshing a ghelp buffer, then we
-        ;; go to step 2 to get the documentation; if not, we need to
-        ;; get the symbol first.
-        (when (not data)
-          (setq data `(:marker ,(point-marker)))
-          (setq symbol (let* ((sym (when-let ((sym (symbol-at-point)))
-                                     (symbol-name sym))))
-                         (pcase prompt
-                           ('no-prompt sym)
-                           ('force-prompt (funcall backend 'symbol data))
-                           ('nil (or sym
-                                     (funcall backend 'symbol data))))))
-          (when (not symbol)
-            (user-error "No symbol at point"))
-          (setq data (plist-put data :symbol symbol)))
-        ;; Request for documentation.
-        (setq doc (funcall backend 'doc data))
-        (when (not doc)
-          (user-error "No documentation found for %s" symbol))
-        (setq data (plist-put data :mode mode))
-        ;; Handle different kinds of doc.
-        (cond ((stringp doc)
-               (setq doc `((,symbol ,doc))))
-              ((stringp (car doc))
-               (setq doc (list doc))))
-        (ghelp--show-page doc data window)))))
+                   (selected-window)))
+         doc)
+    (setq data (plist-put data :mode mode))
+    (setq data (plist-put data :marker marker))
+    (when (not backend)
+      (user-error "No backend found for %s" major-mode))
+    ;; Get symbol.
+    (when (not symbol)
+      (let ((backend-data `(:marker ,marker :mode ,mode)))
+        (setq symbol (let* ((sym (when-let ((sym (symbol-at-point)))
+                                   (symbol-name sym))))
+                       (pcase prompt
+                         ('no-prompt sym)
+                         ('force-prompt
+                          (funcall backend 'symbol backend-data))
+                         ('nil
+                          (or sym (funcall
+                                   backend 'symbol backend-data)))))))
+      
+      (when (not symbol)
+        (user-error "No symbol at point"))
+      (setq data (plist-put data :symbol symbol)))
+    ;; Request for documentation.
+    (setq doc (funcall backend 'doc data))
+    (when (not doc)
+      (user-error "No documentation found for %s" symbol))
+    ;; Handle different kinds of doc.
+    (cond ((stringp doc)
+           (setq doc `((,symbol ,doc))))
+          ((stringp (car doc))
+           (setq doc (list doc))))
+    (ghelp--show-page doc data window)))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."

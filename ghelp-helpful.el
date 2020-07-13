@@ -43,18 +43,15 @@
   (interactive
    (list (read-key-sequence "Press key: ")))
   (let ((sym (key-binding key-sequence)))
-    (cond
-     ((null sym)
-      (user-error "No command is bound to %s"
-                  (key-description key-sequence)))
-     ((commandp sym)
-      (ghelp--describe-1
-       'no-prompt `(:symbol ,sym :mode emacs-lisp-mode
-                            :marker ,(point-marker))))
-     (t
-      (user-error "%s is bound to %s which is not a command"
-                  (key-description key-sequence)
-                  sym)))))
+    (pcase sym
+      ('nil (user-error "No command is bound to %s"
+                        (key-description key-sequence)))
+      ((pred commandp) (ghelp-describe-1
+                        'no-prompt `(:symbol ,sym :mode emacs-lisp-mode
+                                             :marker ,(point-marker))))
+      (_ (user-error "%s is bound to %s which is not a command"
+                     (key-description key-sequence)
+                     sym)))))
 
 (defun ghelp-helpful-callable (symbol)
   (when (fboundp symbol)
@@ -89,10 +86,10 @@
 (defun ghelp-helpful--describe-advice (oldfn button)
   "Describe the symbol that this BUTTON represents."
   (if (derived-mode-p 'ghelp-page-mode)
-      (let* ((sym (button-get button 'symbol)))
-        (ghelp--describe-1
-         'no-prompt (plist-put (plist-put (ghelp-get-page-data) :symbol sym)
-                               :marker (point-marker))))
+      (let* ((data (ghelp-get-page-data)))
+        (setq data (plist-put data :symbol (button-get button 'symbol)))
+        (setq data (plist-put data :marker (point-marker)))
+        (ghelp-describe-1 'no-prompt data))
     (funcall oldfn button)))
 
 (defun ghelp-helpful--update-advice (oldfn)

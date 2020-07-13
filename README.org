@@ -117,6 +117,9 @@ However, one problem might arise if the command invoked by your button needs som
 #+end_src
 ~SYMBOL~ and ~MARKER~ are the same as before, ~MODE~ is the major mode.
 
+** Use a phony major mode
+Normally each backend is tied to an actual major mode. But if you want to write a backend that doesn’t associate with any major mode, like a dictionary, you can use ~ghelp-describe-with-mode~, and use ~dictionary~ as your “major mode”.
+
 * Screencasts
 *Eglot*
 
