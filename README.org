@@ -82,7 +82,7 @@ If ~COMMAND~ is ~'doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is
 #+BEGIN_SRC emacs-lisp
 (:symbol SYMBOL :marker MARKER)
 #+END_SRC
-Returned documentation shoule be a string ending with a newline.
+Returned documentation shoule be a string ending with a newline. Return nil if no documentation is found.
 
 Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “tank”.
 #+BEGIN_SRC emacs-lisp

@@ -137,6 +137,7 @@
 ;;   │ (:symbol SYMBOL :marker MARKER)
 ;;   └────
 ;;   Returned documentation shoule be a string ending with a newline.
+;;   Return nil if no documentation is found.
 ;; 
 ;;   Below is an example backend that gets the symbol and then the
 ;;   documentation and returns them. It only recognizes “woome”, “veemo”,
@@ -422,6 +423,8 @@ DATA, if non-nil, is the value of ‘ghelp-page-data’."
           (setq data (plist-put data :symbol symbol)))
         ;; Request for documentation.
         (setq doc (funcall backend 'doc data))
+        (when (not doc)
+          (user-error "No documentation found for %s" symbol))
         (setq data (plist-put data :mode mode))
         ;; Handle different kinds of doc.
         (cond ((stringp doc)
@@ -1028,7 +1031,8 @@ SYMBOL is from DATA:
 
     (:symbol SYMBOL :marker MARKER)
 
-Returned documentation is a string ending with a newline."
+Returned documentation is a string ending with a newline.
+Return nil if no documentation is found."
   (pcase command
     ('symbol (completing-read "Symbol: "
                               '("woome" "veemo" "love" "tank")))
