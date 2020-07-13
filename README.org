@@ -72,17 +72,13 @@ to look up Emacs Lisp symbols regardless of which major mode you are currently i
 * Write a backend
 A backend is a function that takes two arguments ~COMMAND~ and ~DATA~.
 
-If ~COMMAND~ is ~'symbol~, return a string representing the symbol that the user wants documentation for. In this case, ~DATA~ is a plist of form
-#+begin_src emacs-lisp
-(:marker MARKER)
-#+end_src
-where ~MARKER~ is the marker at the point where user invoked ~ghelp-describe~. (Be a good kid and don’t modify ~MARKER~.)
+If ~COMMAND~ is ~'symbol~, return a string representing the symbol that the user wants documentation for.
 
 If ~COMMAND~ is ~'doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is from ~DATA~:
 #+BEGIN_SRC emacs-lisp
 (:symbol SYMBOL :marker MARKER)
 #+END_SRC
-Returned documentation shoule be a string ending with a newline. Return nil if no documentation is found.
+And ~MARKER~ is the marker at the point where user invoked ~ghelp-describe~. Returned documentation should be a string ending with a newline. Return nil if no documentation is found.
 
 Below is an example backend that gets the symbol and then the documentation and returns them. It only recognizes “woome”, “veemo”, “love” and “tank”.
 #+BEGIN_SRC emacs-lisp
