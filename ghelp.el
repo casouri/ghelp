@@ -45,12 +45,18 @@
 ;; 2 Usage
 ;; ═══════
 ;; 
-;;   Currently you can bind `ghelp-describe' and `ghelp-describe-at-point'
-;;   to a keybinding you like, or bind `ghelp-map'. To resume to a previous
-;;   opened page (like `helm-resume'), use `ghelp-resume'.
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;    `ghelp-describe'           Describe a symbol                         
+;;    `gehlp-describe-at-point'  Describe symbol at point (without prompt) 
+;;    `ghelp-resume'             Reopen last page                          
+;;    `ghelp-describe-elisp'     Describe a Emacs symbol                   
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 
-;;   To access Emacs Lisp help regardless of your current major mode, use
-;;   `ghelp-describe-as-in-emacs-lisp-mode'.
+;;   With helpful.el backend:
+;; 
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;    `ghelp-helpful-key'  Describe a key sequence 
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 
 ;; 
 ;; 3 In ghelp buffer
@@ -298,8 +304,8 @@ ARGS is passed to ‘describe-function’."
     (ignore ghelp--overwrite-mode)
     (apply #'ghelp--describe-1 args)))
 
-(defun ghelp-describe-as-in-emacs-lisp-mode ()
-  "Describe as if in ‘emacs-lisp-mode’."
+(defun ghelp-describe-elisp ()
+  "Describe Emacs symbol."
   (interactive)
   (ghelp-describe-as-in 'emacs-lisp-mode 'force-prompt))
 
