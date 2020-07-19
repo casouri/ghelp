@@ -371,7 +371,7 @@ If MODE doesn’t point to anything, return itself."
   "Refresh current page."
   (interactive)
   (if (derived-mode-p 'ghelp-page-mode)
-      (ghelp--describe-1 'no-prompt (copy-tree ghelp-page-data))
+      (ghelp-describe-1 'no-prompt (copy-tree ghelp-page-data))
     (user-error "Not in a ghelp page")))
 
 (defun ghelp-describe (prompt)
