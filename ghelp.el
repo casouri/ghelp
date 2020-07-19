@@ -379,6 +379,7 @@ If MODE doesn’t point to anything, return itself."
 When called interactively, use prefix argument to force prompt."
   (interactive "p")
   (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
+    (ghelp--maybe-update-current-page)
     (ghelp-describe-1 prompt nil)))
 
 (defun ghelp-describe-with-mode (prompt mode)
@@ -391,6 +392,7 @@ force-prompt  means always prompt for symbol;
 nil           means only prompt when there is no valid symbol at point.
 
 MODE is the major mode of the symbol your want to describe."
+  (ghelp--maybe-update-current-page)
   (ghelp-describe-1 prompt `(:mode ,mode)))
 
 (defun ghelp-describe-1 (prompt data)
@@ -447,6 +449,7 @@ If MARKER is nil, we use the marker at point."
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
   (interactive)
+  (ghelp--maybe-update-current-page)
   (ghelp-describe 'no-prompt))
 
 ;;; History
@@ -1000,6 +1003,20 @@ DATA contains useful information like symbol and mode, see
       (setq window (display-buffer page)))
     (when help-window-select
       (select-window window))))
+
+(defun ghelp--maybe-update-current-page ()
+  "Update current page of history.
+If user opened a page with ‘swtich-to-buffer’, we have no way to
+know and can’t update the current page to it. To make sure the
+current page of our history is almost always up to date, call
+this function. This function looks at visible ghelp pages and set
+them to current in their history."
+  (dolist (window (window-list nil 'never))
+    (with-current-buffer (window-buffer window)
+      (when (derived-mode-p 'ghelp-page-mode)
+        (let* ((symbol (plist-get ghelp-page-data :symbol))
+               (mode (plist-get ghelp-page-data :mode)))
+          (ghelp-history--set-current-page :at symbol mode))))))
 
 ;;; Backend
 ;;
