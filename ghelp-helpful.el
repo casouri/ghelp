@@ -23,38 +23,65 @@
                                       (facep s)
                                       (cl--class-p s))))))
     ;; This way refreshing works with buffer-local variables.
-    ('doc (with-current-buffer (marker-buffer (plist-get data :marker))
-            (let* ((symbol (intern-soft (plist-get data :symbol)))
-                   (callable-doc (ghelp-helpful-callable symbol))
-                   (variable-doc (ghelp-helpful-variable symbol))
-                   (entry-list (list
-                                (when callable-doc
-                                  (list (format "%s (callable)" symbol)
-                                        callable-doc))
-                                (when variable-doc
-                                  (list (format "%s (variable)" symbol)
-                                        variable-doc))
-                                (ghelp-face-describe-symbol symbol)
-                                (ghelp-cl-type-describe-symbol symbol))))
-              (remove nil entry-list))))))
+    ('doc
+     (with-current-buffer (marker-buffer (plist-get data :marker))
+       (if-let ((kmacro (plist-get data :kmacro)))
+           ;; Describe a keyboard macro.
+           (let ((macro-name (plist-get data :symbol)))
+             (list (list
+                    macro-name
+                    (format "%s is a keyboard macro that expands to %s"
+                            macro-name
+                            (key-description kmacro)))))
+         ;; Describe a symbol.
+         (let ((symbol (intern-soft (plist-get data :symbol))))
+           ;; But wait, symbol could be a keymap, which helpful
+           ;; doesn’t support yet.
+           (if (keymapp (symbol-function symbol))
+               (format "%s is a sparse keymap. Meaning it is used as a prefix key" symbol)
+             ;; Normal symbol.
+             (let* ((symbol (intern-soft (plist-get data :symbol)))
+                    (callable-doc (ghelp-helpful-callable symbol))
+                    (variable-doc (ghelp-helpful-variable symbol))
+                    (entry-list
+                     (list
+                      (when callable-doc
+                        (list (format "%s (callable)" symbol)
+                              callable-doc))
+                      (when variable-doc
+                        (list (format "%s (variable)" symbol)
+                              variable-doc))
+                      (ghelp-face-describe-symbol symbol)
+                      (ghelp-cl-type-describe-symbol symbol))))
+               (remove nil entry-list)))))))))
 
 (defun ghelp-helpful-key (key-sequence)
   "Describe KEY-SEQUENCE."
   (interactive
    (list (read-key-sequence "Press key: ")))
-  (let ((sym (key-binding key-sequence)))
-    (pcase sym
+  (let ((def (key-binding key-sequence))
+        (key-name (key-description key-sequence)))
+    (pcase def
       ('nil (user-error "No command is bound to %s"
                         (key-description key-sequence)))
-      ((pred commandp) (ghelp-describe-1
-                        'no-prompt `(:symbol ,sym :mode emacs-lisp-mode
-                                             :marker ,(point-marker))))
+      ((pred commandp)
+       (if (or (stringp def) (vectorp def))
+           ;; DEF is a keyboard macro.
+           (ghelp-describe-1
+            'no-prompt `(:symbol ,key-name :mode emacs-lisp-mode
+                                 :marker ,(point-marker)
+                                 :kmacro ,def))
+         ;; DEF is a symbol for a function.
+         (ghelp-describe-1
+          'no-prompt `(:symbol ,def :mode emacs-lisp-mode
+                               :marker ,(point-marker)))))
       (_ (user-error "%s is bound to %s which is not a command"
                      (key-description key-sequence)
-                     sym)))))
+                     def)))))
 
 (defun ghelp-helpful-callable (symbol)
-  (when (fboundp symbol)
+  (when (or (and (symbolp symbol) (fboundp symbol))
+            (vectorp symbol) (stringp symbol))
     (let ((buf (helpful--buffer symbol t)))
       (with-current-buffer buf
         (helpful-update)
