@@ -421,22 +421,23 @@ If MARKER is nil, we use the marker at point."
       (user-error "No backend found for %s" major-mode))
     ;; Get symbol.
     (when (not symbol)
-      (let ((backend-data `(:marker ,marker :mode ,mode)))
-        (setq symbol (let* ((sym (when-let ((sym (symbol-at-point)))
-                                   (symbol-name sym))))
-                       (pcase prompt
-                         ('no-prompt sym)
-                         ('force-prompt
-                          (funcall backend 'symbol backend-data))
-                         ('nil
-                          (or sym (funcall
-                                   backend 'symbol backend-data)))))))
-      
+      (setq symbol (let* ((sym (when-let ((sym (symbol-at-point)))
+                                 (symbol-name sym))))
+                     (pcase prompt
+                       ('no-prompt sym)
+                       ('force-prompt
+                        (funcall backend 'symbol (copy-tree data)))
+                       ('nil
+                        (or sym (funcall backend 'symbol
+                                         (copy-tree data)))))))
+      (if (not (stringp symbol))
+          (error "Symbol return by the backend is not a string"))
+      ;; Still no symbol?
       (when (not symbol)
         (user-error "No symbol at point"))
       (setq data (plist-put data :symbol symbol)))
     ;; Request for documentation.
-    (setq doc (funcall backend 'doc data))
+    (setq doc (funcall backend 'doc (copy-tree data)))
     (when (not doc)
       (user-error "No documentation found for %s" symbol))
     ;; Handle different kinds of doc.
