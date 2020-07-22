@@ -842,8 +842,7 @@ The plist contains useful information like symbol and marker."
 
 (defun ghelp-page--header-line-format ()
   "Return back and forward button for the current page."
-  (let ((history (ghelp-page--history))
-        (symbol (plist-get ghelp-page-data :symbol)))
+  (let ((symbol (plist-get ghelp-page-data :symbol)))
     (concat (propertize "  " 'display '(space :width (10)))
             ;; [back]
             (propertize
