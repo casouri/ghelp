@@ -106,10 +106,10 @@
 ;; 
 ;;   Normally if you call `ghelp-describe-function' it selects the backends
 ;;   to use by the current major-mode. If you want to look up some symbol
-;;   with a specific backend, try `(ghelp-describe-as-in 'mode)'. For
-;;   example, you can bind
+;;   with a specific backend, try `(ghelp-describe-with-mode ’prompt
+;;   'mode)'. For example, you can bind
 ;;   ┌────
-;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-as-in ’emacs-lisp-mode)))
+;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-with-mode ’force-prompt ’emacs-lisp-mode)))
 ;;   └────
 ;;   to look up Emacs Lisp symbols regardless of which major mode you are
 ;;   currently in.

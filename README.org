@@ -61,9 +61,9 @@ If you want several major modes to share the same set of history and backends (l
 
 You can customize faces: ~ghelp-entry~, ~ghelp-folded-entry~, and ~ghelp-entry-title~.
 
-Normally if you call ~ghelp-describe-function~ it selects the backends to use by the current major-mode. If you want to look up some symbol with a specific backend, try ~(ghelp-describe-as-in 'mode)~. For example, you can bind
+Normally if you call ~ghelp-describe-function~ it selects the backends to use by the current major-mode. If you want to look up some symbol with a specific backend, try ~(ghelp-describe-with-mode ’prompt 'mode)~. For example, you can bind
 #+BEGIN_SRC emacs-lisp
-(define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-as-in ’emacs-lisp-mode)))
+(define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-with-mode ’force-prompt ’emacs-lisp-mode)))
 #+END_SRC
 to look up Emacs Lisp symbols regardless of which major mode you are currently in.
 
