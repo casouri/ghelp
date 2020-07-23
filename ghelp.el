@@ -78,21 +78,19 @@
 ;; 
 ;;   Commands you can use:
 ;; 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    Key            Command                        
-;;   ───────────────────────────────────────────────
-;;    `f/b'          go forward/backward in history 
-;;    `n/p'          next/previous line             
-;;    `N/P'          next/previous entry            
-;;    `m/['          next/previous button           
-;;    `TAB'          next button                    
-;;    `C-TAB'        collapse/expand entry          
-;;    `g'            refresh page                   
-;;    `q'            close page                     
-;;    `<space>'      scroll down                    
-;;    `<backspace>'  scroll up                      
-;;    `s'            search/switch to a page        
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;    Key      Command                        
+;;   ─────────────────────────────────────────
+;;    `f/b'    go forward/backward in history 
+;;    `TAB'    next button                    
+;;    `S-TAB'  previous button                
+;;    `t'      collapse/expand entry          
+;;    `g'      refresh page                   
+;;    `q'      close page                     
+;;    `s'      search/switch to a page        
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 
+;;   For more bindings, type `M-x ghelp-describe ghelp-page-mode-map RET'.
 ;; 
 ;; 
 ;; 4 Customization
@@ -760,7 +758,7 @@ Each entry is a ‘ghelp-entry’.")
 
 (defvar ghelp-page-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<C-tab>") #'ghelp-toggle-entry)
+    (define-key map "t" #'ghelp-toggle-entry)
     (define-key map (kbd "TAB") #'forward-button)
     (define-key map (kbd "<backtab>") #'backward-button)
     (define-key map "q" #'ghelp-close)

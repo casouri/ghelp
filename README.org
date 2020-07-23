@@ -44,19 +44,17 @@ A ghelp buffer is called a page. Each page is made of several entries. Each entr
 
 Commands you can use:
 
-| Key         | Command                        |
-|-------------+--------------------------------|
+| Key           | Command                        |
+|---------------+--------------------------------|
 | =f/b=         | go forward/backward in history |
-| =n/p=         | next/previous line             |
-| =N/P=         | next/previous entry            |
-| =m/[=         | next/previous button           |
 | =TAB=         | next button                    |
-| =C-TAB=       | collapse/expand entry          |
+| =S-TAB=       | previous button                |
+| =t=           | collapse/expand entry          |
 | =g=           | refresh page                   |
 | =q=           | close page                     |
-| =<space>=     | scroll down                    |
-| =<backspace>= | scroll up                      |
 | =s=           | search/switch to a page        |
+
+For more bindings, type =M-x ghelp-describe ghelp-page-mode-map RET=. 
 
 * Customization
 If you want several major modes to share the same set of history and backends (like ~lisp-interaction-mode~ and ~emacs-lisp-mode~), add an entry ~(mode1 . mode2)~ to ~ghelp-mode-share-alist~, and ~mode1~ will share everything of ~mode2~.
