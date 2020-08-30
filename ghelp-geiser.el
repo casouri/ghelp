@@ -6,6 +6,8 @@
 
 ;;; Commentary:
 ;;
+;; This file contains the geiser.el backend for Ghelp. I copied code
+;; from geiser.el and modified them to work with Ghelp.
 
 ;;; Code:
 ;;

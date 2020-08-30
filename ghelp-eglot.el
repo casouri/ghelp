@@ -4,6 +4,8 @@
 
 ;;; Commentary:
 ;;
+;; This file contains the eglot.el backend for Ghelp. I copied code
+;; from eglot.el and modified them to work with Ghelp.
 
 ;;; Code:
 ;;
