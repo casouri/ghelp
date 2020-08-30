@@ -13,17 +13,35 @@
 (require 'pcase)
 
 (defun ghelp-helpful-backend (command data)
-  "Helpful backend."
+  "Helpful backend.
+COMMAND and DATA are described in the Commentary of ghelp.el."
   (pcase command
-    ('symbol (completing-read "Symbol: " obarray
-                              (lambda (s)
-                                (let ((s (intern-soft s)))
-                                  (or (fboundp s)
-                                      (boundp s)
-                                      (facep s)
-                                      (cl--class-p s))))))
-    ;; This way refreshing works with buffer-local variables.
+    ('symbol
+     (pcase (plist-get data :category)
+       ('function (completing-read
+                   "Function: "
+                   #'help--symbol-completion-table
+                   (lambda (fn)
+                     (or (fboundp fn)
+                         (get fn 'function-documentation)))
+                   t))
+       ('variable (completing-read
+                   "Variable: "
+                   #'help--symbol-completion-table
+                   (lambda (var)
+                     (or (get var 'variable-documentation)
+                         (and (boundp var) (not (keywordp var)))))
+                   t))
+       (_ (completing-read "Symbol: " obarray
+                           (lambda (s)
+                             (let ((s (intern-soft s)))
+                               (or (fboundp s)
+                                   (boundp s)
+                                   (facep s)
+                                   (cl--class-p s))))
+                           t))))
     ('doc
+     ;; This way refreshing works with buffer-local variables.
      (with-current-buffer (marker-buffer (plist-get data :marker))
        (if-let ((kmacro (plist-get data :kmacro)))
            ;; Describe a keyboard macro.
@@ -80,6 +98,7 @@
                      def)))))
 
 (defun ghelp-helpful-callable (symbol)
+  "Return documentation fof SYMBOL as a function."
   (when (or (and (symbolp symbol) (fboundp symbol))
             (vectorp symbol) (stringp symbol))
     (let ((buf (helpful--buffer symbol t)))
@@ -93,8 +112,9 @@
           (kill-buffer buf))))))
 
 (defun ghelp-helpful-variable (symbol)
+  "Return documentation for SYMBOL as a variable."
   ;; For some reason ‘helpful-update’ jumps to the definition
-  ;; of the variable.
+  ;; of the variable, so we wrap a `save-excursion'.
   (save-excursion
     (when (helpful--variable-p symbol)
       (let ((buf (helpful--buffer symbol nil)))
@@ -111,7 +131,8 @@
 ;;; Advices
 
 (defun ghelp-helpful--describe-advice (oldfn button)
-  "Describe the symbol that this BUTTON represents."
+  "Describe the symbol that this BUTTON represents.
+OLDFN can be `helpful--describe' or `helpful--describe-exactly'."
   (if (derived-mode-p 'ghelp-page-mode)
       (let* ((data (ghelp-get-page-data)))
         (setq data (plist-put data :symbol (button-get button 'symbol)))
@@ -120,6 +141,8 @@
     (funcall oldfn button)))
 
 (defun ghelp-helpful--update-advice (oldfn)
+  "Refresh ghelp page after OLDFN.
+OLDFN is `helpful-update'."
   (if (derived-mode-p 'ghelp-page-mode)
       (ghelp-refresh)
     (funcall oldfn)))

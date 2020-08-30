@@ -379,7 +379,9 @@ If MODE doesn’t point to anything, return itself."
 
 (defun ghelp-describe (prompt)
   "Describe symbol.
-When called interactively, use prefix argument to force prompt."
+When called interactively, use prefix argument to force prompt.
+
+PROMPT"
   (interactive "p")
   (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
     (ghelp--maybe-update-current-page)
@@ -455,6 +457,28 @@ If MARKER is nil, we use the marker at point."
   (interactive)
   (ghelp--maybe-update-current-page)
   (ghelp-describe 'no-prompt))
+
+(defun ghelp-describe-function (prompt)
+  "Describe a function (or macro).
+When called interactively, use prefix argument to force prompt.
+
+PROMPT"
+  (interactive "p")
+  (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
+    (ghelp--maybe-update-current-page)
+    (ghelp-describe-1
+     prompt '(:mode emacs-lisp-mode :category function))))
+
+(defun ghelp-describe-variable (prompt)
+  "Describe a variable.
+When called interactively, use prefix argument to force prompt.
+
+PROMPT"
+  (interactive "p")
+  (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
+    (ghelp--maybe-update-current-page)
+    (ghelp-describe-1
+     prompt '(:mode emacs-lisp-mode :category variable))))
 
 ;;; History
 ;;
