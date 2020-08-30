@@ -28,10 +28,12 @@ Without ~use-package~:
 
 * Usage
 
-| ~ghelp-describe~          | Describe a symbol                         |
+| ~ghelp-describe~          | Describe a symbol in  current major mode  |
 | ~gehlp-describe-at-point~ | Describe symbol at point (without prompt) |
 | ~ghelp-resume~            | Reopen last page                          |
-| ~ghelp-describe-elisp~ | Describe a Emacs symbol |
+| ~ghelp-describe-elisp~    | Describe a Emacs symbol                   |
+| ~ghelp-describe-function~ | Describe a Elisp function                 |
+| ~ghelp-describe-variable~ | Describe a Elisp variable                 |
 
 Normally ~ghelp-describe~ shows documentation of the symbol at point, If you want to query for a symbol (e.g., with completion), type =C-u= then ~ghelp-describe~.
 

@@ -51,10 +51,12 @@
 ;; ═══════
 ;; 
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    `ghelp-describe'           Describe a symbol                         
+;;    `ghelp-describe'           Describe a symbol in  current major mode  
 ;;    `gehlp-describe-at-point'  Describe symbol at point (without prompt) 
 ;;    `ghelp-resume'             Reopen last page                          
 ;;    `ghelp-describe-elisp'     Describe a Emacs symbol                   
+;;    `ghelp-describe-function'  Describe a Elisp function                 
+;;    `ghelp-describe-variable'  Describe a Elisp variable                 
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 
 ;;   Normally `ghelp-describe' shows documentation of the symbol at point,
@@ -106,10 +108,10 @@
 ;; 
 ;;   Normally if you call `ghelp-describe-function' it selects the backends
 ;;   to use by the current major-mode. If you want to look up some symbol
-;;   with a specific backend, try `(ghelp-describe-as-in 'mode)'. For
-;;   example, you can bind
+;;   with a specific backend, try `(ghelp-describe-with-mode ’prompt
+;;   'mode)'. For example, you can bind
 ;;   ┌────
-;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-as-in ’emacs-lisp-mode)))
+;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-with-mode ’force-prompt ’emacs-lisp-mode)))
 ;;   └────
 ;;   to look up Emacs Lisp symbols regardless of which major mode you are
 ;;   currently in.
