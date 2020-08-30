@@ -16,6 +16,7 @@
 ;; • Documentation history, you can search in history, go back/forward.
 ;; 
 ;; *Currently supported backends*
+;; • builtin Help
 ;; • [helpful]
 ;; • [eglot]
 ;; • [geiser]
@@ -54,23 +55,29 @@
 ;;    `ghelp-describe'           Describe a symbol in  current major mode  
 ;;    `gehlp-describe-at-point'  Describe symbol at point (without prompt) 
 ;;    `ghelp-resume'             Reopen last page                          
-;;    `ghelp-describe-elisp'     Describe a Emacs symbol                   
-;;    `ghelp-describe-function'  Describe a Elisp function                 
-;;    `ghelp-describe-variable'  Describe a Elisp variable                 
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;;    `ghelp-describe-elisp'     Describe a Emacs symbol (like apropos)         
+;;    `ghelp-describe-function'  Describe a Elisp function/macro/keyboard macro 
+;;    `ghelp-describe-variable'  Describe a Elisp variable                      
+;;    `ghelp-describe-key'       Describe a key sequence                        
+;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 
 ;;   Normally `ghelp-describe' shows documentation of the symbol at point,
 ;;   If you want to query for a symbol (e.g., with completion), type `C-u'
 ;;   then `ghelp-describe'.
 ;; 
-;;   With helpful.el backend:
 ;; 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    `ghelp-helpful-key'  Describe a key sequence 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;; 3 Enable backends
+;; ═════════════════
+;; 
+;;   Each backend are loaded automatically when you enabled the
+;;   corresponding package. For example, when you load `helpful.el', ghelp
+;;   automatically loads its helpful backend.
 ;; 
 ;; 
-;; 3 In ghelp buffer
+;; 4 In ghelp buffer
 ;; ═════════════════
 ;; 
 ;;   A ghelp buffer is called a page. Each page is made of several entries.
@@ -83,6 +90,7 @@
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;;    Key      Command                        
 ;;   ─────────────────────────────────────────
+;;    `?'      show help                      
 ;;    `f/b'    go forward/backward in history 
 ;;    `TAB'    next button                    
 ;;    `S-TAB'  previous button                
@@ -92,10 +100,11 @@
 ;;    `s'      search/switch to a page        
 ;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ;; 
-;;   For more bindings, type `M-x ghelp-describe ghelp-page-mode-map RET'.
+;;   For more bindings, type `?' in a ghelp buffer, or type `M-x
+;;   ghelp-describe ghelp-page-mode-map RET'.
 ;; 
 ;; 
-;; 4 Customization
+;; 5 Customization
 ;; ═══════════════
 ;; 
 ;;   If you want several major modes to share the same set of history and
@@ -117,7 +126,7 @@
 ;;   currently in.
 ;; 
 ;; 
-;; 5 Write a backend
+;; 6 Write a backend
 ;; ═════════════════
 ;; 
 ;;   A backend is a function that takes two arguments `COMMAND' and `DATA'.
@@ -156,10 +165,10 @@
 ;;   └────
 ;; 
 ;; 
-;; 6 Advanced backend
+;; 7 Advanced backend
 ;; ══════════════════
 ;; 
-;; 6.1 Returned documentation
+;; 7.1 Returned documentation
 ;; ──────────────────────────
 ;; 
 ;;   Besides a string, the returned documentation could carry more
@@ -174,7 +183,7 @@
 ;;   `((TITLE BODY)...)', where each element is a `(TITLE BODY)' form.
 ;; 
 ;; 
-;; 6.2 Use buttons in your documentation
+;; 7.2 Use buttons in your documentation
 ;; ─────────────────────────────────────
 ;; 
 ;;   You can use buttons in your documentation as long they are text
@@ -192,7 +201,7 @@
 ;;   mode.
 ;; 
 ;; 
-;; 6.3 Use a phony major mode
+;; 7.3 Use a phony major mode
 ;; ──────────────────────────
 ;; 
 ;;   Normally each backend is tied to an actual major mode. But if you want
@@ -201,7 +210,7 @@
 ;;   `dictionary' as your “major mode”.
 ;; 
 ;; 
-;; 7 Screencasts
+;; 8 Screencasts
 ;; ═════════════
 ;; 
 ;;   *Eglot*

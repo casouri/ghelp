@@ -8,6 +8,7 @@ This package provides a generic help system similar to Emacs Help. Unlike Emacs 
 - Documentation history, you can search in history, go back/forward.
 
 *Currently supported backends*
+- builtin Help
 - [[https://github.com/Wilfred/helpful][helpful]]
 - [[https://github.com/joaotavora/eglot][eglot]]
 - [[https://www.nongnu.org/geiser/][geiser]]
@@ -31,32 +32,35 @@ Without ~use-package~:
 | ~ghelp-describe~          | Describe a symbol in  current major mode  |
 | ~gehlp-describe-at-point~ | Describe symbol at point (without prompt) |
 | ~ghelp-resume~            | Reopen last page                          |
-| ~ghelp-describe-elisp~    | Describe a Emacs symbol                   |
-| ~ghelp-describe-function~ | Describe a Elisp function                 |
-| ~ghelp-describe-variable~ | Describe a Elisp variable                 |
+
+| ~ghelp-describe-elisp~    | Describe a Emacs symbol (like apropos) |
+| ~ghelp-describe-function~ | Describe a Elisp function/macro/keyboard macro |
+| ~ghelp-describe-variable~ | Describe a Elisp variable              |
+| ~ghelp-describe-key~      | Describe a key sequence                |
 
 Normally ~ghelp-describe~ shows documentation of the symbol at point, If you want to query for a symbol (e.g., with completion), type =C-u= then ~ghelp-describe~.
 
-With helpful.el backend:
+* Enable backends
 
-| ~ghelp-helpful-key~ | Describe a key sequence |
+Each backend are loaded automatically when you enabled the corresponding package. For example, when you load =helpful.el=, ghelp automatically loads its helpful backend.
 
 * In ghelp buffer
 A ghelp buffer is called a page. Each page is made of several entries. Each entry is a self-contained documentation. (For example, you could have a entry for a symbol as a function and another one for it as a variable.)
 
 Commands you can use:
 
-| Key           | Command                        |
-|---------------+--------------------------------|
-| =f/b=         | go forward/backward in history |
-| =TAB=         | next button                    |
-| =S-TAB=       | previous button                |
-| =t=           | collapse/expand entry          |
-| =g=           | refresh page                   |
-| =q=           | close page                     |
-| =s=           | search/switch to a page        |
+| Key     | Command                        |
+|---------+--------------------------------|
+| =?=     | show help                      |
+| =f/b=   | go forward/backward in history |
+| =TAB=   | next button                    |
+| =S-TAB= | previous button                |
+| =t=     | collapse/expand entry          |
+| =g=     | refresh page                   |
+| =q=     | close page                     |
+| =s=     | search/switch to a page        |
 
-For more bindings, type =M-x ghelp-describe ghelp-page-mode-map RET=. 
+For more bindings, type =?= in a ghelp buffer, or type =M-x ghelp-describe ghelp-page-mode-map RET=. 
 
 * Customization
 If you want several major modes to share the same set of history and backends (like ~lisp-interaction-mode~ and ~emacs-lisp-mode~), add an entry ~(mode1 . mode2)~ to ~ghelp-mode-share-alist~, and ~mode1~ will share everything of ~mode2~.
