@@ -829,6 +829,7 @@ Each entry is a ‘ghelp-entry’.")
     (define-key map (kbd "<backspace>") #'scroll-down-command)
     (define-key map "g" #'ghelp-refresh)
     (define-key map "s" #'ghelp-switch-to-page)
+    (define-key map "?" #'ghelp-page-show-help)
     map))
 
 (define-derived-mode ghelp-page-mode fundamental-mode
@@ -943,6 +944,20 @@ The plist contains useful information like symbol and marker."
                   nil t))
          (page (ghelp-history--page-at :at symbol mode)))
     (switch-to-buffer page)))
+
+(defun ghelp-page-show-help ()
+  "Show help for available commands in `ghelp-page-mode'."
+  (interactive)
+  (message "q       quit            t       toggle entry
+g       refresh         s       switch to page
+
+TAB     next button     S-TAB   previous button
+f       next page       b       previous page
+d       next entry      u       previous entry
+
+m       next button     [       previous button
+SPC     scroll down     DEL     scroll up
+"))
 
 ;;;;; Functions
 
