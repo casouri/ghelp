@@ -4,6 +4,8 @@
 
 ;;; Commentary:
 ;;
+;; This file contains the Helpful.el backend for Ghelp. I copied code
+;; from helpful.el and modified them to work with Ghelp.
 
 ;;; Code:
 ;;
@@ -13,65 +15,15 @@
 (require 'pcase)
 
 (defun ghelp-helpful-backend (command data)
-  "Helpful backend.
-COMMAND and DATA are described in the Commentary of ghelp.el."
-  (pcase command
-    ('symbol
-     (pcase (plist-get data :category)
-       ('function (completing-read
-                   "Function: "
-                   #'help--symbol-completion-table
-                   (lambda (fn)
-                     (or (fboundp fn)
-                         (get fn 'function-documentation)))
-                   t))
-       ('variable (completing-read
-                   "Variable: "
-                   #'help--symbol-completion-table
-                   (lambda (var)
-                     (or (get var 'variable-documentation)
-                         (and (boundp var) (not (keywordp var)))))
-                   t))
-       (_ (completing-read "Symbol: " obarray
-                           (lambda (s)
-                             (let ((s (intern-soft s)))
-                               (or (fboundp s)
-                                   (boundp s)
-                                   (facep s)
-                                   (cl--class-p s))))
-                           t))))
-    ('doc
-     ;; This way refreshing works with buffer-local variables.
-     (with-current-buffer (marker-buffer (plist-get data :marker))
-       (if-let ((kmacro (plist-get data :kmacro)))
-           ;; Describe a keyboard macro.
-           (let ((macro-name (plist-get data :symbol)))
-             (list (list
-                    macro-name
-                    (format "%s is a keyboard macro that expands to %s"
-                            macro-name
-                            (key-description kmacro)))))
-         ;; Describe a symbol.
-         (let ((symbol (intern-soft (plist-get data :symbol))))
-           ;; But wait, symbol could be a keymap, which helpful
-           ;; doesn’t support yet.
-           (if (keymapp (symbol-function symbol))
-               (format "%s is a sparse keymap. Meaning it is used as a prefix key" symbol)
-             ;; Normal symbol.
-             (let* ((symbol (intern-soft (plist-get data :symbol)))
-                    (callable-doc (ghelp-helpful-callable symbol))
-                    (variable-doc (ghelp-helpful-variable symbol))
-                    (entry-list
-                     (list
-                      (when callable-doc
-                        (list (format "%s (callable)" symbol)
-                              callable-doc))
-                      (when variable-doc
-                        (list (format "%s (variable)" symbol)
-                              variable-doc))
-                      (ghelp-face-describe-symbol symbol)
-                      (ghelp-cl-type-describe-symbol symbol))))
-               (remove nil entry-list)))))))))
+  "Help backend.
+COMMAND and DATA are described in the Commentary of ghelp.el.
+FUNCTION-BACKEND returns the documentation of the symbol as a
+function, VARIABLE-BACKEND returns the documentation of the
+symbol as a variable, other backends in BACKEND-LIST returns the
+documentation of the symbol as other things."
+  (ghelp-help-backend-1
+   command data #'ghelp-helpful-callable #'ghelp-helpful-variable
+   #'ghelp-help--face #'ghelp-help-cl-type))
 
 (defun ghelp-helpful-key (key-sequence)
   "Describe KEY-SEQUENCE."
@@ -97,25 +49,32 @@ COMMAND and DATA are described in the Commentary of ghelp.el."
                      (key-description key-sequence)
                      def)))))
 
-(defun ghelp-helpful-callable (symbol)
-  "Return documentation fof SYMBOL as a function."
-  (when (or (and (symbolp symbol) (fboundp symbol))
-            (vectorp symbol) (stringp symbol))
-    (let ((buf (helpful--buffer symbol t)))
-      (with-current-buffer buf
-        (helpful-update)
-        ;; insert an ending line
-        (let ((inhibit-read-only t))
-          (goto-char (point-max))
-          (insert "\n"))
-        (prog1 (buffer-string)
-          (kill-buffer buf))))))
+(defun ghelp-helpful-callable (symbol original-buffer)
+  "Return documentation for SYMBOL as a function.
+ORIGINAL-BUFFER is the buffer where user requested for documentation."
+  (with-current-buffer original-buffer
+    (when (or (and (symbolp symbol) (fboundp symbol))
+              (vectorp symbol) (stringp symbol))
+      (let ((buf (helpful--buffer symbol t)))
+        (with-current-buffer buf
+          (helpful-update)
+          ;; insert an ending line
+          (let ((inhibit-read-only t))
+            (goto-char (point-max))
+            (insert "\n"))
+          (prog1 (list (format
+                        "%s (%s)" symbol
+                        (if (symbolp symbol)
+                            (if (functionp (symbol-function symbol))
+                                "function" "macro")
+                          "keyboard macro"))
+                       (buffer-string))
+            (kill-buffer buf)))))))
 
-(defun ghelp-helpful-variable (symbol)
-  "Return documentation for SYMBOL as a variable."
-  ;; For some reason ‘helpful-update’ jumps to the definition
-  ;; of the variable, so we wrap a `save-excursion'.
-  (save-excursion
+(defun ghelp-helpful-variable (symbol original-buffer)
+  "Return documentation for SYMBOL as a variable.
+ORIGINAL-BUFFER is the buffer where user requested for documentation."
+  (with-current-buffer original-buffer
     (when (helpful--variable-p symbol)
       (let ((buf (helpful--buffer symbol nil)))
         (with-current-buffer buf
@@ -125,7 +84,8 @@ COMMAND and DATA are described in the Commentary of ghelp.el."
             (goto-char (point-max))
             (insert "\n"))
           (prog1 (let ((yank-excluded-properties nil))
-                   (buffer-string))
+                   (list (format "%s (variable)" symbol)
+                         (buffer-string)))
             (kill-buffer buf)))))))
 
 ;;; Advices

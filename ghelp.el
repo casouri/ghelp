@@ -1108,7 +1108,10 @@ Return nil if no documentation is found."
 
 ;;; Setup
 
-(when (require 'helpful nil t)
+(require 'ghelp-builtin)
+(ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
+
+(with-eval-after-load 'helpful
   (require 'ghelp-helpful)
   (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
 
