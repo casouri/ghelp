@@ -25,30 +25,6 @@ documentation of the symbol as other things."
    command data #'ghelp-helpful-callable #'ghelp-helpful-variable
    #'ghelp-help--face #'ghelp-help-cl-type))
 
-(defun ghelp-helpful-key (key-sequence)
-  "Describe KEY-SEQUENCE."
-  (interactive
-   (list (read-key-sequence "Press key: ")))
-  (let ((def (key-binding key-sequence))
-        (key-name (key-description key-sequence)))
-    (pcase def
-      ('nil (user-error "No command is bound to %s"
-                        (key-description key-sequence)))
-      ((pred commandp)
-       (if (or (stringp def) (vectorp def))
-           ;; DEF is a keyboard macro.
-           (ghelp-describe-1
-            'no-prompt `(:symbol ,key-name :mode emacs-lisp-mode
-                                 :marker ,(point-marker)
-                                 :kmacro ,def))
-         ;; DEF is a symbol for a function.
-         (ghelp-describe-1
-          'no-prompt `(:symbol ,def :mode emacs-lisp-mode
-                               :marker ,(point-marker)))))
-      (_ (user-error "%s is bound to %s which is not a command"
-                     (key-description key-sequence)
-                     def)))))
-
 (defun ghelp-helpful-callable (symbol original-buffer)
   "Return documentation for SYMBOL as a function.
 ORIGINAL-BUFFER is the buffer where user requested for documentation."

@@ -482,6 +482,30 @@ PROMPT"
     (ghelp-describe-1
      prompt '(:mode emacs-lisp-mode :category variable))))
 
+(defun ghelp-describe-key (key-sequence)
+  "Describe KEY-SEQUENCE."
+  (interactive
+   (list (read-key-sequence "Press key: ")))
+  (let ((def (key-binding key-sequence))
+        (key-name (key-description key-sequence)))
+    (pcase def
+      ('nil (user-error "No command is bound to %s"
+                        (key-description key-sequence)))
+      ((pred commandp)
+       (if (or (stringp def) (vectorp def))
+           ;; DEF is a keyboard macro.
+           (ghelp-describe-1
+            'no-prompt `(:symbol ,key-name :mode emacs-lisp-mode
+                                 :marker ,(point-marker)
+                                 :kmacro ,def))
+         ;; DEF is a symbol for a function.
+         (ghelp-describe-1
+          'no-prompt `(:symbol ,def :mode emacs-lisp-mode
+                               :marker ,(point-marker)))))
+      (_ (user-error "%s is bound to %s which is not a command"
+                     (key-description key-sequence)
+                     def)))))
+
 ;;; History
 ;;
 ;; Functions:
