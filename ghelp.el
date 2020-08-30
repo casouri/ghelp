@@ -230,33 +230,26 @@
 ;; - Allow backends to use their own buffers. This also allows backends
 ;;   to be async.
 
-;;;; Usage
-
-;; Use these functions:
-
-;; - ‘ghelp-describe’
-;; - ‘ghelp-describe-at-point’
-
 ;;;; Terminology
 
-;; - ghelp   :: this package
-
-;; - page    :: the buffer displaying documentation
-
-;; - backend :: the backend providing documentation. Each major mode
+;; - ghelp   :: This package.
+;;
+;; - page    :: The buffer displaying documentation.
+;;
+;; - backend :: The backend providing documentation. Each major mode
 ;;              has one backend
-
-;; - entry   :: page is made of entries. Each entry is a self-contained
-;; documentation for the symbol. Each symbol can be
-;; interpreted in different ways and we present each
-;; interpretation’s documentation in a entry.
-
-;; - history :: Each major-mode has it’s own page history
+;;
+;; - entry :: Page is made of entries. Each entry is a self-contained
+;;            documentation for the symbol. Each symbol can be
+;;            interpreted in different ways and we present each
+;;            interpretation’s documentation in a entry.
+;;
+;; - history :: Each major-mode has it’s own page history.
 
 ;;;; Page anatomy
 
 ;; A page is made of a series of entries. Each entry is made of a
-;; title and the documentation body.
+;; title and a documentation body.
 
 ;;;; Backends
 
@@ -267,7 +260,7 @@
 ;;;; History
 
 ;; Each major mode has a page history. Though multiple major mode
-;; could share a same history. A history has a list of nodes. The list
+;; could share the same history. A history has a list of nodes. The list
 ;; is sorted from newest node to oldest node (so we can remove oldest
 ;; node when necessary). The nodes themselves constructs a
 ;; doubly-linked list. This list is sorted in logical order -- every
@@ -284,11 +277,11 @@
 
 ;;;; Code structure
 
-;; ghelp is made of several parts: ghelp-describe, ghelp-history,
-;; ghelp-page, ghelp-entry, and ghelp-backend. They don’t know the
-;; detail of each other and only communicate by “exposed” functions.
-;; (At least that’s what I attempted to do.) You can find the
-;; “exposed” functions on the beginning of each section.
+;; Ghelp contains self-contained sub-modules: ghelp-entry, ghelp-page,
+;; and ghelp-history. Other code don’t know the detail of them and
+;; only communicate with them by “exposed” functions. (At least that’s
+;; what I attempt to do.) You can find the “exposed” functions on the
+;; beginning of each section.
 
 ;;; Code:
 ;;
