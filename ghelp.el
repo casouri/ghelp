@@ -464,27 +464,17 @@ If MARKER is nil, we use the marker at point."
   (ghelp--maybe-update-current-page)
   (ghelp-describe 'no-prompt))
 
-(defun ghelp-describe-function (prompt)
-  "Describe a function (or macro).
-When called interactively, use prefix argument to force prompt.
+(defun ghelp-describe-function ()
+  "Describe a function/macro/keyboard macro."
+  (interactive)
+  (ghelp-describe-1
+   'force-prompt '(:mode emacs-lisp-mode :category function)))
 
-PROMPT"
-  (interactive "p")
-  (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
-    (ghelp--maybe-update-current-page)
-    (ghelp-describe-1
-     prompt '(:mode emacs-lisp-mode :category function))))
-
-(defun ghelp-describe-variable (prompt)
-  "Describe a variable.
-When called interactively, use prefix argument to force prompt.
-
-PROMPT"
-  (interactive "p")
-  (let ((prompt (if (eq prompt 4) 'force-prompt nil)))
-    (ghelp--maybe-update-current-page)
-    (ghelp-describe-1
-     prompt '(:mode emacs-lisp-mode :category variable))))
+(defun ghelp-describe-variable ()
+  "Describe a variable."
+  (interactive)
+  (ghelp-describe-1
+   'force-prompt '(:mode emacs-lisp-mode :category variable)))
 
 (defun ghelp-describe-key (key-sequence)
   "Describe KEY-SEQUENCE."
