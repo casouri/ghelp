@@ -1020,7 +1020,8 @@ If FOLD non-nil, fold the entry after insertion."
       entry)))
 
 (defun ghelp-page-insert-entry-list (entry-list &optional fold)
-  "Insert entries in ENTRY-LIST one-by-one, FOLD see ‘ghelp-page-insert-entry’."
+  "Insert entries in ENTRY-LIST one-by-one.
+For FOLD, see ‘ghelp-page-insert-entry’."
   (dolist (entry entry-list)
     (ghelp-page-insert-entry entry fold)))
 
@@ -1035,7 +1036,7 @@ If FOLD non-nil, fold the entry after insertion."
         (setq overlays (cdr overlays))))))
 
 (defun ghelp--page-name-from (mode symbol)
-  "Return the buffer name would be used by ghelp page for MODE and SYMBOL."
+  "Return the buffer name used by ghelp page for MODE and SYMBOL."
   (format " *ghelp %s : %s*" mode symbol))
 
 ;; Helpers
