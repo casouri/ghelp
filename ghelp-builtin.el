@@ -76,15 +76,24 @@ documentation of the symbol as other things."
                (format "%s is a sparse keymap. Meaning it is used as a prefix key" symbol)
              ;; Normal symbol.
              (let* ((symbol (intern-soft (plist-get data :symbol)))
+                    (category (plist-get data :category))
+                    (func-doc (funcall function-backend symbol
+                                       original-buffer))
+                    (var-doc (funcall variable-backend symbol
+                                      original-buffer))
                     (entry-list
-                     (append
-                      (list (funcall function-backend symbol
-                                     original-buffer)
-                            (funcall variable-backend symbol
-                                     original-buffer))
-                      (cl-loop for fn in backend-list
-                               collect
-                               (funcall fn symbol original-buffer)))))
+                     ;; If the user only requested for
+                     ;; function/variable, only show
+                     ;; function/variable.
+                     (pcase category
+                       ('function (list func-doc))
+                       ('variable (list var-doc))
+                       (_ (append
+                           (list func-doc var-doc)
+                           (cl-loop
+                            for fn in backend-list
+                            collect
+                            (funcall fn symbol original-buffer)))))))
                (remove nil entry-list)))))))))
 
 (defun ghelp-help--function (symbol _)

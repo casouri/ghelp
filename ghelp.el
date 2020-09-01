@@ -491,10 +491,12 @@ If MARKER is nil, we use the marker at point."
            (ghelp-describe-1
             'no-prompt `(:symbol ,key-name :mode emacs-lisp-mode
                                  :marker ,(point-marker)
+                                 :category function
                                  :kmacro ,def))
          ;; DEF is a symbol for a function.
          (ghelp-describe-1
-          'no-prompt `(:symbol ,def :mode emacs-lisp-mode
+          'no-prompt `(:symbol ,(symbol-name def) :mode emacs-lisp-mode
+                               :category function
                                :marker ,(point-marker)))))
       (_ (user-error "%s is bound to %s which is not a command"
                      (key-description key-sequence)
