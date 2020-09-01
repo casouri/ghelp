@@ -13,11 +13,12 @@
 (require 'eglot)
 (require 'pcase)
 
-(defvar ghelp-eglot-supported-modes (let (list)
-                                      (dolist (cell eglot-server-programs list)
-                                        (if (symbolp (car cell))
-                                            (push (car cell) list)
-                                          (setq list (append (car cell) list)))))
+(defvar ghelp-eglot-supported-modes
+  (let (list)
+    (dolist (cell eglot-server-programs list)
+      (if (symbolp (car cell))
+          (push (car cell) list)
+        (setq list (append (car cell) list)))))
   "A list of major modes that are supported by eglot.")
 
 (defun ghelp-eglot-backend (command data)
