@@ -137,7 +137,7 @@
 ;;   If `COMMAND' is `'doc', return the documentation for `SYMBOL', where
 ;;   `SYMBOL' is from `DATA':
 ;;   ┌────
-;;   │ (:symbol SYMBOL :marker MARKER)
+;;   │ (:symbol-name SYMBOL :marker MARKER)
 ;;   └────
 ;;   And `MARKER' is the marker at the point where user invoked
 ;;   `ghelp-describe'. Returned documentation should be a string ending
@@ -151,7 +151,7 @@
 ;;   │   (pcase command
 ;;   │     ('symbol (completing-read "Symbol: "
 ;;   │                               '("woome" "veemo" "love" "tank")))
-;;   │     ('doc (pcase (plist-get data :symbol)
+;;   │     ('doc (pcase (plist-get data :symbol-name)
 ;;   │             ("woome" "Woome!!\n")
 ;;   │             ("veemo" "Veemo!!\n")
 ;;   │             ("love" "Peace!!\n")
@@ -195,7 +195,7 @@
 ;;   is describing. You can get that by `(ghelp-get-page-data)', which
 ;;   returns a plist of form
 ;;   ┌────
-;;   │ (:symbol SYMBOL :mode MODE :marker MARKER)
+;;   │ (:symbol-name SYMBOL :mode MODE :marker MARKER)
 ;;   └────
 ;;   `SYMBOL' and `MARKER' are the same as before, `MODE' is the major
 ;;   mode.
