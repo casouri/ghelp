@@ -467,12 +467,14 @@ If MARKER is nil, we use the marker at point."
 (defun ghelp-describe-function ()
   "Describe a function/macro/keyboard macro."
   (interactive)
+  (ghelp--maybe-update-current-page)
   (ghelp-describe-1
    'force-prompt '(:mode emacs-lisp-mode :category function)))
 
 (defun ghelp-describe-variable ()
   "Describe a variable."
   (interactive)
+  (ghelp--maybe-update-current-page)
   (ghelp-describe-1
    'force-prompt '(:mode emacs-lisp-mode :category variable)))
 
@@ -480,6 +482,7 @@ If MARKER is nil, we use the marker at point."
   "Describe KEY-SEQUENCE."
   (interactive
    (list (read-key-sequence "Press key: ")))
+  (ghelp--maybe-update-current-page)
   (let ((def (key-binding key-sequence))
         (key-name (key-description key-sequence)))
     (pcase def
