@@ -62,20 +62,20 @@ documentation of the symbol as other things."
      (let ((original-buffer (marker-buffer (plist-get data :marker))))
        (if-let ((kmacro (plist-get data :kmacro)))
            ;; Describe a keyboard macro.
-           (let ((macro-name (plist-get data :symbol)))
+           (let ((macro-name (plist-get data :symbol-name)))
              (list (list
                     macro-name
                     (format "%s is a keyboard macro that expands to %s"
                             macro-name
                             (key-description kmacro)))))
          ;; Describe a symbol.
-         (let ((symbol (intern-soft (plist-get data :symbol))))
+         (let ((symbol (intern-soft (plist-get data :symbol-name))))
            ;; But wait, symbol could be a keymap, which helpful
            ;; doesn’t support yet.
            (if (keymapp (symbol-function symbol))
                (format "%s is a sparse keymap. Meaning it is used as a prefix key" symbol)
              ;; Normal symbol.
-             (let* ((symbol (intern-soft (plist-get data :symbol)))
+             (let* ((symbol (intern-soft (plist-get data :symbol-name)))
                     (category (plist-get data :category))
                     (func-doc (funcall function-backend symbol
                                        original-buffer))

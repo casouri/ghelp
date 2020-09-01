@@ -23,7 +23,7 @@
                  for idx from 0 to 3
                  for node = (make-ghelp-history-node
                              :mode (nth idx modes)
-                             :symbol (nth idx symbols)
+                             :symbol-name (nth idx symbols)
                              :buffer (nth idx buffers))
                  collect node))
          (history (make-ghelp-history :nodes nodes))

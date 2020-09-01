@@ -411,7 +411,7 @@ MODE is the major mode of the symbol your want to describe."
 
 PROMPT is the same as in ‘ghelp-describe-with-mode’.
 
-DATA is a plist of form (:symbol SYMBOL :mode MODE :marker MARKER).
+DATA is a plist of form (:symbol-name SYMBOL :mode MODE :marker MARKER).
 SYMBOL is the symbol we want to describe, MODE is the major mode,
 MARKER is the marker at where user requested for documentation.
 
@@ -420,7 +420,7 @@ If MODE is nil, we use current buffer’s major mode.
 If MARKER is nil, we use the marker at point."
   (interactive "p")
   (let* ((mode (or (plist-get data :mode) (ghelp-get-mode)))
-         (symbol (plist-get data :symbol))
+         (symbol (plist-get data :symbol-name))
          (marker (or (plist-get data :marker) (point-marker)))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
@@ -446,7 +446,7 @@ If MARKER is nil, we use the marker at point."
       ;; Still no symbol?
       (when (not symbol)
         (user-error "No symbol at point"))
-      (setq data (plist-put data :symbol symbol)))
+      (setq data (plist-put data :symbol-name symbol)))
     ;; Request for documentation.
     (setq doc (funcall backend 'doc (copy-tree data)))
     (when (not doc)
@@ -492,15 +492,19 @@ If MARKER is nil, we use the marker at point."
        (if (or (stringp def) (vectorp def))
            ;; DEF is a keyboard macro.
            (ghelp-describe-1
-            'no-prompt `(:symbol ,key-name :mode emacs-lisp-mode
-                                 :marker ,(point-marker)
-                                 :category function
-                                 :kmacro ,def))
+            'no-prompt `(:symbol-name
+                         ,key-name
+                         :mode emacs-lisp-mode
+                         :marker ,(point-marker)
+                         :category function
+                         :kmacro ,def))
          ;; DEF is a symbol for a function.
          (ghelp-describe-1
-          'no-prompt `(:symbol ,(symbol-name def) :mode emacs-lisp-mode
-                               :category function
-                               :marker ,(point-marker)))))
+          'no-prompt `(:symbol-name
+                       ,(symbol-name def)
+                       :mode emacs-lisp-mode
+                       :category function
+                       :marker ,(point-marker)))))
       (_ (user-error "%s is bound to %s which is not a command"
                      (key-description key-sequence)
                      def)))))
@@ -534,13 +538,13 @@ HISTORY is the history of documentation queries.")
 (cl-defstruct ghelp-history-node
   "A node in a ‘ghelp-history’.
 
- - mode   :: Major mode.
- - symbol :: Symbol that the documentation describes.
- - buffer :: The ghelp buffer containing the documentation.
- - prev   :: Previous node.
- - next   :: next node."
+ - mode        :: Major mode.
+ - symbol-name :: Symbol that the documentation describes.
+ - buffer      :: The ghelp buffer containing the documentation.
+ - prev        :: Previous node.
+ - next        :: next node."
   mode
-  symbol
+  symbol-name
   buffer
   prev
   next)
@@ -560,7 +564,8 @@ HISTORY is the history of documentation queries.")
 (defun ghelp-history--symbol-node (symbol history)
   "Return the node describing SYMBOL in HISTORY or nil."
   ;; Remember that SYMBOL is string.
-  (seq-find (lambda (node) (equal (ghelp-history-node-symbol node) symbol))
+  (seq-find (lambda (node)
+              (equal (ghelp-history-node-symbol-name node) symbol))
             (ghelp-history-nodes history)))
 
 (defun ghelp-history--remove-node (node history)
@@ -629,7 +634,7 @@ HiSTORY is too long when its length exceeds
 (defun ghelp-history--push (page symbol mode)
   "Push PAGE for SYMBOL of MODE to the history of MODE."
   (let* ((node (make-ghelp-history-node :buffer page
-                                        :symbol symbol
+                                        :symbol-name symbol
                                         :mode mode))
          (history (ghelp-history--of mode))
          (current (ghelp-history-current history)))
@@ -692,7 +697,7 @@ If can’t find one, return nil."
   "Return a list of symbols (string) that the history for MODE contains."
   (when-let* ((history (ghelp-history--of mode))
               (nodes (ghelp-history-nodes history)))
-    (mapcar #'ghelp-history-node-symbol nodes)))
+    (mapcar #'ghelp-history-node-symbol-name nodes)))
 
 ;;; Entry
 ;;
@@ -872,10 +877,10 @@ Changeling this variable doesn’t affect existing ghelp pages.")
   "A plist that stores information about the documentation.
 The plist includes these values:
 
-    :symbol    A string; the documentation is about this symbol.
-    :mode      The major mode; it is used by ‘ghelp--show-page’.
-    :marker    The marker at the point where the user requested
-               documentation of this symbol.
+    :symbol-name A string; the documentation is about this symbol.
+    :mode        The major mode; it is used by ‘ghelp--show-page’.
+    :marker      The marker at the point where the user requested
+                 documentation of this symbol.
 
 NOTE: Backends should not use this variable, instead, use
 ‘ghelp-get-page-data’.")
@@ -895,7 +900,7 @@ The plist contains useful information like symbol and marker."
 
 (defun ghelp-page--header-line-format ()
   "Return back and forward button for the current page."
-  (let ((symbol (plist-get ghelp-page-data :symbol)))
+  (let ((symbol (plist-get ghelp-page-data :symbol-name)))
     (concat (propertize "  " 'display '(space :width (10)))
             ;; [back]
             (propertize
@@ -916,7 +921,7 @@ The plist contains useful information like symbol and marker."
 (defun ghelp-back ()
   "Go back one page."
   (interactive)
-  (let* ((symbol (plist-get ghelp-page-data :symbol))
+  (let* ((symbol (plist-get ghelp-page-data :symbol-name))
          (mode (plist-get ghelp-page-data :mode))
          (page (ghelp-history--page-at :before symbol mode)))
     (when page
@@ -926,7 +931,7 @@ The plist contains useful information like symbol and marker."
 (defun ghelp-forward ()
   "Go forward one page."
   (interactive)
-  (let* ((symbol (plist-get ghelp-page-data :symbol))
+  (let* ((symbol (plist-get ghelp-page-data :symbol-name))
          (mode (plist-get ghelp-page-data :mode))
          (page (ghelp-history--page-at :after symbol mode)))
     (when page
@@ -965,7 +970,7 @@ SPC     scroll down     DEL     scroll up
   (with-current-buffer (generate-new-buffer
                         (ghelp--page-name-from mode symbol))
     (ghelp-page-mode)
-    (plist-put ghelp-page-data :symbol symbol)
+    (plist-put ghelp-page-data :symbol-name symbol)
     (plist-put ghelp-page-data :mode mode)
     (when ghelp-enable-header-line
       (setq header-line-format
@@ -1054,7 +1059,7 @@ DATA contains useful information like symbol and mode, see
 ‘ghelp-page-data’ for more."
   (let* ((mode (plist-get data :mode))
          (marker (plist-get data :marker))
-         (symbol (plist-get data :symbol))
+         (symbol (plist-get data :symbol-name))
          (page (ghelp-get-page-or-create mode symbol)))
     (with-current-buffer page
       (ghelp-page-clear)
@@ -1063,7 +1068,8 @@ DATA contains useful information like symbol and mode, see
        (point-max))
       (ghelp-previous-entry)
       (ghelp-entry-unfold)
-      (setq ghelp-page-data (plist-put ghelp-page-data :symbol symbol))
+      (setq ghelp-page-data
+            (plist-put ghelp-page-data :symbol-name symbol))
       (setq ghelp-page-data (plist-put ghelp-page-data :marker marker))
       (setq ghelp-page-data (plist-put ghelp-page-data :mode mode)))
     (if window
@@ -1082,7 +1088,7 @@ them to current in their history."
   (dolist (window (window-list nil 'never))
     (with-current-buffer (window-buffer window)
       (when (derived-mode-p 'ghelp-page-mode)
-        (let* ((symbol (plist-get ghelp-page-data :symbol))
+        (let* ((symbol (plist-get ghelp-page-data :symbol-name))
                (mode (plist-get ghelp-page-data :mode)))
           (ghelp-history--set-current-page :at symbol mode))))))
 
@@ -1125,14 +1131,14 @@ where MARKER is the marker at the point where user invoked
 If COMMAND is 'doc, return the documentation for SYMBOL, where
 SYMBOL is from DATA:
 
-    (:symbol SYMBOL :marker MARKER)
+    (:symbol-name SYMBOL :marker MARKER)
 
 Returned documentation is a string ending with a newline.
 Return nil if no documentation is found."
   (pcase command
     ('symbol (completing-read "Symbol: "
                               '("woome" "veemo" "love" "tank")))
-    ('doc (pcase (plist-get data :symbol)
+    ('doc (pcase (plist-get data :symbol-name)
             ("woome" "Woome!!\n")
             ("veemo" "Veemo!!\n")
             ("love" "Peace!!\n")

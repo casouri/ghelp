@@ -33,10 +33,10 @@ Without ~use-package~:
 | ~gehlp-describe-at-point~ | Describe symbol at point (without prompt) |
 | ~ghelp-resume~            | Reopen last page                          |
 
-| ~ghelp-describe-elisp~    | Describe a Emacs symbol (like apropos) |
+| ~ghelp-describe-elisp~    | Describe a Emacs symbol (like apropos)         |
 | ~ghelp-describe-function~ | Describe a Elisp function/macro/keyboard macro |
-| ~ghelp-describe-variable~ | Describe a Elisp variable              |
-| ~ghelp-describe-key~      | Describe a key sequence                |
+| ~ghelp-describe-variable~ | Describe a Elisp variable                      |
+| ~ghelp-describe-key~      | Describe a key sequence                        |
 
 Normally ~ghelp-describe~ shows documentation of the symbol at point, If you want to query for a symbol (e.g., with completion), type =C-u= then ~ghelp-describe~.
 
@@ -80,7 +80,7 @@ If ~COMMAND~ is ~'symbol~, return a string representing the symbol that the user
 
 If ~COMMAND~ is ~'doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is from ~DATA~:
 #+BEGIN_SRC emacs-lisp
-(:symbol SYMBOL :marker MARKER)
+(:symbol-name SYMBOL :marker MARKER)
 #+END_SRC
 And ~MARKER~ is the marker at the point where user invoked ~ghelp-describe~. Returned documentation should be a string ending with a newline. Return nil if no documentation is found.
 
@@ -90,7 +90,7 @@ Below is an example backend that gets the symbol and then the documentation and 
   (pcase command
     ('symbol (completing-read "Symbol: "
                               '("woome" "veemo" "love" "tank")))
-    ('doc (pcase (plist-get data :symbol)
+    ('doc (pcase (plist-get data :symbol-name)
             ("woome" "Woome!!\n")
             ("veemo" "Veemo!!\n")
             ("love" "Peace!!\n")
@@ -117,7 +117,7 @@ You can use buttons in your documentation as long they are text buttons made by 
 
 However, one problem might arise if the command invoked by your button needs some information, like the symbol that this documentation page is describing. You can get that by ~(ghelp-get-page-data)~, which returns a plist of form
 #+begin_src emacs-lisp
-(:symbol SYMBOL :mode MODE :marker MARKER)
+(:symbol-name SYMBOL :mode MODE :marker MARKER)
 #+end_src
 ~SYMBOL~ and ~MARKER~ are the same as before, ~MODE~ is the major mode.
 

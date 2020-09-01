@@ -71,7 +71,8 @@ ORIGINAL-BUFFER is the buffer where user requested for documentation."
 OLDFN can be `helpful--describe' or `helpful--describe-exactly'."
   (if (derived-mode-p 'ghelp-page-mode)
       (let* ((data (ghelp-get-page-data)))
-        (setq data (plist-put data :symbol (button-get button 'symbol)))
+        (setq data (plist-put data :symbol-name
+                              (button-get button 'symbol)))
         (setq data (plist-put data :marker (point-marker)))
         (ghelp-describe-1 'no-prompt data))
     (funcall oldfn button)))

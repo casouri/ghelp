@@ -18,7 +18,7 @@
   "Backend for geiser."
   (pcase command
     ('symbol (geiser-completion--read-symbol "Symbol: "))
-    ('doc (let* ((symbol (intern-soft (plist-get data :symbol)))
+    ('doc (let* ((symbol (intern-soft (plist-get data :symbol-name)))
                  (impl geiser-impl--implementation)
                  (module (geiser-doc--module (geiser-eval--get-module)
                                              impl)))
@@ -36,7 +36,7 @@
         doc
       (let ((mode (plist-get (ghelp-get-page-data) :mode)))
         (ghelp--show-page `((,sym-name ,doc))
-                          `(:symbol ,sym-name :mode ,mode)
+                          `(:symbol-name ,sym-name :mode ,mode)
                           (selected-window))))))
 
 (advice-add 'geiser-doc-symbol
