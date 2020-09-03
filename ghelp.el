@@ -1161,7 +1161,7 @@ Return nil if no documentation is found."
 (defun ghelp-dummy ()
   "Demonstrate the dummy backend."
   (interactive)
-  (ghelp-describe-as-in 'dummy-mode))
+  (ghelp-describe-with-mode 'force-prompt 'dummy-mode))
 
 (ghelp-register-backend 'dummy-mode #'ghelp-dummy-backend)
 
