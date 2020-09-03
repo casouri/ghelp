@@ -406,6 +406,15 @@ MODE is the major mode of the symbol your want to describe."
   (ghelp--maybe-update-current-page)
   (ghelp-describe-1 prompt `(:mode ,mode)))
 
+(defun ghelp--plist-set (plist prop val)
+  "Set PROP to VAL in PLIST non-destructively."
+  (if (plist-get plist prop)
+      (let ((idx (1+ (seq-position plist prop))))
+        (append (seq-subseq plist 0 idx)
+                (list val)
+                (seq-subseq plist (1+ idx))))
+    (append (list prop val) plist)))
+
 (defun ghelp-describe-1 (prompt data)
   "Describe symbol.
 
@@ -419,15 +428,16 @@ If SYMBOL is nil, we try to guess or prompt for the symbol.
 If MODE is nil, we use current buffer’s major mode.
 If MARKER is nil, we use the marker at point."
   (interactive "p")
-  (let* ((mode (or (plist-get data :mode) (ghelp-get-mode)))
+  (let* ((data data) ; Create a lexical local variable.
+         (mode (or (plist-get data :mode) (ghelp-get-mode)))
          (symbol (plist-get data :symbol-name))
          (marker (or (plist-get data :marker) (point-marker)))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
                    (selected-window)))
          doc)
-    (setq data (plist-put data :mode mode))
-    (setq data (plist-put data :marker marker))
+    (setq data (ghelp--plist-set data :mode mode))
+    (setq data (ghelp--plist-set data :marker marker))
     (when (not backend)
       (user-error "No backend found for %s" major-mode))
     ;; Get symbol.
@@ -446,7 +456,7 @@ If MARKER is nil, we use the marker at point."
       ;; Still no symbol?
       (when (not symbol)
         (user-error "No symbol at point"))
-      (setq data (plist-put data :symbol-name symbol)))
+      (setq data (ghelp--plist-set data :symbol-name symbol)))
     ;; Request for documentation.
     (setq doc (funcall backend 'doc (copy-tree data)))
     (when (not doc)
@@ -970,8 +980,10 @@ SPC     scroll down     DEL     scroll up
   (with-current-buffer (generate-new-buffer
                         (ghelp--page-name-from mode symbol))
     (ghelp-page-mode)
-    (plist-put ghelp-page-data :symbol-name symbol)
-    (plist-put ghelp-page-data :mode mode)
+    (setq ghelp-page-data
+          (ghelp--plist-set ghelp-page-data :symbol-name symbol))
+    (setq ghelp-page-data
+          (ghelp--plist-set ghelp-page-data :mode mode))
     (when ghelp-enable-header-line
       (setq header-line-format
             '((:eval (ghelp-page--header-line-format)))))
@@ -1069,9 +1081,11 @@ DATA contains useful information like symbol and mode, see
       (ghelp-previous-entry)
       (ghelp-entry-unfold)
       (setq ghelp-page-data
-            (plist-put ghelp-page-data :symbol-name symbol))
-      (setq ghelp-page-data (plist-put ghelp-page-data :marker marker))
-      (setq ghelp-page-data (plist-put ghelp-page-data :mode mode)))
+            (ghelp--plist-set ghelp-page-data :symbol-name symbol))
+      (setq ghelp-page-data
+            (ghelp--plist-set ghelp-page-data :marker marker))
+      (setq ghelp-page-data
+            (ghelp--plist-set ghelp-page-data :mode mode)))
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
