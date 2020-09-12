@@ -352,7 +352,7 @@ If MODE doesn’t point to anything, return itself."
 
 ;;; Commands
 
-(defun ghelp-close ()
+(defun ghelp-quit ()
   "Close ghelp buffer."
   (interactive)
   (cl-loop for buffer1 in (window-prev-buffers)
@@ -830,7 +830,7 @@ Each entry is a ‘ghelp-entry’.")
     (define-key map "t" #'ghelp-toggle-entry)
     (define-key map (kbd "TAB") #'forward-button)
     (define-key map (kbd "<backtab>") #'backward-button)
-    (define-key map "q" #'ghelp-close)
+    (define-key map "q" #'ghelp-quit)
     (define-key map "b" #'ghelp-back)
     (define-key map "f" #'ghelp-forward)
     (define-key map "d" #'ghelp-next-entry)
