@@ -50,19 +50,22 @@ ORIGINAL-BUFFER is the buffer where user requested for documentation."
 (defun ghelp-helpful-variable (symbol original-buffer)
   "Return documentation for SYMBOL as a variable.
 ORIGINAL-BUFFER is the buffer where user requested for documentation."
-  (with-current-buffer original-buffer
-    (when (helpful--variable-p symbol)
-      (let ((buf (helpful--buffer symbol nil)))
-        (with-current-buffer buf
-          (helpful-update)
-          ;; insert an ending newline
-          (let ((inhibit-read-only t))
-            (goto-char (point-max))
-            (insert "\n"))
-          (prog1 (let ((yank-excluded-properties nil))
-                   (list (format "%s (variable)" symbol)
-                         (buffer-string)))
-            (kill-buffer buf)))))))
+  ;; For some reason, helpful-variable sometimes moves the point to
+  ;; the definition.
+  (save-excursion
+    (with-current-buffer original-buffer
+      (when (helpful--variable-p symbol)
+        (let ((buf (helpful--buffer symbol nil)))
+          (with-current-buffer buf
+            (helpful-update)
+            ;; insert an ending newline
+            (let ((inhibit-read-only t))
+              (goto-char (point-max))
+              (insert "\n"))
+            (prog1 (let ((yank-excluded-properties nil))
+                     (list (format "%s (variable)" symbol)
+                           (buffer-string)))
+              (kill-buffer buf))))))))
 
 ;;; Advices
 
