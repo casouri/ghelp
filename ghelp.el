@@ -372,7 +372,7 @@ If MODE doesn’t point to anything, return itself."
          (page (ghelp-history--current-page mode)))
     (if page
         (let ((win (display-buffer page)))
-          (when help-window-select
+          (when (and (window-live-p win) help-window-select)
             (select-window win)))
       (user-error "Can’t find a previous page for mode %s" mode))))
 
@@ -1090,7 +1090,7 @@ DATA contains useful information like symbol and mode, see
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
-    (when help-window-select
+    (when (and (window-live-p window) help-window-select)
       (select-window window))))
 
 (defun ghelp--maybe-update-current-page ()
