@@ -11,6 +11,11 @@
 ;;; Code:
 ;;
 
+(require 'help-fns)
+(require 'cl-lib)
+;; For `cl--describe-class'.
+(require 'cl-extra)
+
 ;;; Function
 
 (defun ghelp-help-backend (command data)

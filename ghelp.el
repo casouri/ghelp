@@ -1168,6 +1168,12 @@ Return nil if no documentation is found."
 
 ;;; Setup
 
+(declare-function ghelp-help-backend "ghelp-builtin.el")
+(declare-function ghelp-helpful-backend "ghelp-helpful.el")
+(declare-function ghelp-eglot-backend "ghelp-eglot.el")
+(declare-function ghelp-geiser-backend "ghelp-geiser.el")
+(defvar ghelp-eglot-supported-modes)
+
 (require 'ghelp-builtin)
 (ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
 
