@@ -14,6 +14,8 @@
 (require 'ghelp-builtin)
 (require 'pcase)
 
+(defvar ghelp-helpful--advice-installed)
+
 (defun ghelp-helpful-backend (command data)
   "Help backend.
 COMMAND and DATA are described in the Commentary of ghelp.el.
@@ -21,6 +23,8 @@ FUNCTION-BACKEND returns the documentation of the symbol as a
 function, VARIABLE-BACKEND returns the documentation of the
 symbol as a variable, other backends in BACKEND-LIST returns the
 documentation of the symbol as other things."
+  (unless ghelp-helpful--advice-installed
+    (ghelp-helpful--install-advice))
   (ghelp-help-backend-1
    command data #'ghelp-helpful-callable #'ghelp-helpful-variable
    #'ghelp-help--face #'ghelp-help-cl-type))
@@ -87,10 +91,16 @@ OLDFN is `helpful-update'."
       (ghelp-refresh)
     (funcall oldfn)))
 
-(advice-add 'helpful-update :around #'ghelp-helpful--update-advice)
-(advice-add 'helpful--describe :around #'ghelp-helpful--describe-advice)
-(advice-add 'helpful--describe-exactly
-            :around #'ghelp-helpful--describe-advice)
+(defvar ghelp-helpful--advice-installed nil
+  "Non-nil if advice are installed.")
+
+(defun ghelp-helpful--install-advice ()
+  "Install advice."
+  (advice-add 'helpful-update :around #'ghelp-helpful--update-advice)
+  (advice-add 'helpful--describe :around #'ghelp-helpful--describe-advice)
+  (advice-add 'helpful--describe-exactly
+              :around #'ghelp-helpful--describe-advice)
+  (setq ghelp-helpful--advice-installed t))
 
 (provide 'ghelp-helpful)
 
