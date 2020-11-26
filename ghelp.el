@@ -1178,13 +1178,16 @@ Return nil if no documentation is found."
 (ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
 
 (when (find-library-name "helpful")
+  (require 'helpful))
+
+(with-eval-after-load 'helpful
   (require 'ghelp-helpful)
   (ghelp-register-backend 'emacs-lisp-mode #'ghelp-helpful-backend))
 
 (with-eval-after-load 'eglot
   (require 'ghelp-eglot)
   (ghelp-register-backend ghelp-eglot-supported-modes
-                      #'ghelp-eglot-backend))
+                          #'ghelp-eglot-backend))
 
 (with-eval-after-load 'geiser
   (require 'ghelp-geiser)
