@@ -196,7 +196,7 @@ BUFFER is the original buffer the symbol is in."
 					       variable file-name)))))))
           (with-current-buffer standard-output
 	    (setq val-start-pos (point))
-	    (princ "value is")
+	    (princ "Its value is")
 	    (let ((line-beg (line-beginning-position))
 		  (print-rep
 		   (let ((rep
