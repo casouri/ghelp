@@ -12,8 +12,9 @@ This package provides a generic help system similar to Emacs Help. Unlike Emacs 
 - [[https://github.com/Wilfred/helpful][helpful]]
 - [[https://github.com/joaotavora/eglot][eglot]]
 - [[https://www.nongnu.org/geiser/][geiser]]
+- [[https://github.com/joaotavora/sly][sly]]
 
-[[https://github.com/casouri/ghelp#screencasts][☞ Screencasts]]
+[[Screencasts][☞ Screencasts]]
 
 * Install & load
 Download the files and add them to load path.
@@ -112,6 +113,11 @@ First, it can be a list of form ~(TITLE BODY)~ where ~TITLE~ is the title for yo
 
 Second, you can return multiple documentations by returning a list ~((TITLE BODY)...)~, where each element is a ~(TITLE BODY)~ form.
 
+** Asynchronous backend
+Ghelp also supports asynchronous backends. Instead of returning the documentation immediately, a backend can return a callback function. This function should have a signature like ~(buffer callback &rest _)~. ~BUFFER~ is the ghelp documentation buffer, the backend should insert text into this buffer once it gets the documentation. ~CALLBACK~ is a function provided by ghelp for finalizing the setup for documentation buffer. It should be called /after/ the backend have inserted all documentations into the buffer. ~&rest _~ allows ghelp extend this interface in the future.
+
+Currently asynchronous documentation doesn’t get goodies like foldable sections.
+
 ** Use buttons in your documentation
 You can use buttons in your documentation as long they are text buttons made by text properties, rather than overlay buttons. After all your are returning a string, which doesn’t carry overlays.
 
@@ -124,6 +130,7 @@ However, one problem might arise if the command invoked by your button needs som
 ** Use a phony major mode
 Normally each backend is tied to an actual major mode. But if you want to write a backend that doesn’t associate with any major mode, like a dictionary, you can use ~ghelp-describe-with-mode~, and use ~dictionary~ as your “major mode”.
 
+
 * Screencasts
 *Eglot*
 
@@ -132,3 +139,7 @@ Normally each backend is tied to an actual major mode. But if you want to write 
 *Helpful*
 
 [[./ghelp-helpful-800.gif]]
+
+*Sly*
+
+[[./ghelp-sly.png]]

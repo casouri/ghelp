@@ -20,6 +20,7 @@
 ;; • [helpful]
 ;; • [eglot]
 ;; • [geiser]
+;; • [sly]
 ;; 
 ;; [☞ Screencasts]
 ;; 
@@ -30,7 +31,9 @@
 ;; 
 ;; [geiser] <https://www.nongnu.org/geiser/>
 ;; 
-;; [☞ Screencasts] <https://github.com/casouri/ghelp#screencasts>
+;; [sly] <https://github.com/joaotavora/sly>
+;; 
+;; [☞ Screencasts] See section 8
 ;; 
 ;; 
 ;; 1 Install & load
@@ -183,7 +186,24 @@
 ;;   `((TITLE BODY)...)', where each element is a `(TITLE BODY)' form.
 ;; 
 ;; 
-;; 7.2 Use buttons in your documentation
+;; 7.2 Asynchronous backend
+;; ────────────────────────
+;; 
+;;   Ghelp also supports asynchronous backends. Instead of returning the
+;;   documentation immediately, a backend can return a callback function.
+;;   This function should have a signature like `(buffer callback &rest
+;;   _)'. `BUFFER' is the ghelp documentation buffer, the backend should
+;;   insert text into this buffer once it gets the documentation.
+;;   `CALLBACK' is a function provided by ghelp for finalizing the setup
+;;   for documentation buffer. It should be called /after/ the backend have
+;;   inserted all documentations into the buffer. `&rest _' allows ghelp
+;;   extend this interface in the future.
+;; 
+;;   Currently asynchronous documentation doesn’t get goodies like foldable
+;;   sections.
+;; 
+;; 
+;; 7.3 Use buttons in your documentation
 ;; ─────────────────────────────────────
 ;; 
 ;;   You can use buttons in your documentation as long they are text
@@ -201,7 +221,7 @@
 ;;   mode.
 ;; 
 ;; 
-;; 7.3 Use a phony major mode
+;; 7.4 Use a phony major mode
 ;; ──────────────────────────
 ;; 
 ;;   Normally each backend is tied to an actual major mode. But if you want
@@ -215,11 +235,15 @@
 ;; 
 ;;   *Eglot*
 ;; 
-;;   <file:./ghelp-eglot-800.gif>
+;;   <./ghelp-eglot-800.gif>
 ;; 
 ;;   *Helpful*
 ;; 
-;;   <file:./ghelp-helpful-800.gif>
+;;   <./ghelp-helpful-800.gif>
+;; 
+;;   *Sly*
+;; 
+;;   <./ghelp-sly.png>
 ;;
 ;; Commentary end
 
@@ -435,8 +459,7 @@ If MARKER is nil, we use the marker at point."
          (marker (or (plist-get data :marker) (point-marker)))
          (backend (ghelp--get-backend mode))
          (window (when (derived-mode-p 'ghelp-page-mode)
-                   (selected-window)))
-         doc)
+                   (selected-window))))
     (setq data (ghelp--plist-set data :mode mode))
     (setq data (ghelp--plist-set data :marker marker))
     (when (not backend)
@@ -459,15 +482,17 @@ If MARKER is nil, we use the marker at point."
         (user-error "No symbol at point"))
       (setq data (ghelp--plist-set data :symbol-name symbol)))
     ;; Request for documentation.
-    (setq doc (funcall backend 'doc (copy-tree data)))
-    (when (not doc)
-      (user-error "No documentation found for %s" symbol))
-    ;; Handle different kinds of doc.
-    (cond ((stringp doc)
-           (setq doc `((,symbol ,doc))))
-          ((stringp (car doc))
-           (setq doc (list doc))))
-    (ghelp--show-page doc data window)))
+    (let ((doc (funcall backend 'doc (copy-tree data))))
+      ;; DOC could be nil, string, (TITLE BODY), ((TITLE BODY)...) or
+      ;; a function.
+      (when (not doc)
+        (user-error "No documentation found for %s" symbol))
+      ;; Handle different kinds of doc.
+      (let ((entry-list (cond ((stringp doc) `((,symbol ,doc)))
+                              ((and (consp doc) (stringp (car doc)))
+                               (list doc))
+                              (t doc))))
+        (ghelp--show-page entry-list data window)))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -1070,24 +1095,38 @@ For FOLD, see ‘ghelp-page-insert-entry’."
 (defun ghelp--show-page (entry-list data &optional window)
   "Display page with ENTRY-LIST in WINDOW (if non-nil).
 DATA contains useful information like symbol and mode, see
-‘ghelp-page-data’ for more."
+‘ghelp-page-data’ for more. ENTRY-LIST is either ((TITLE .
+BODY)...) or a buffer."
   (let* ((mode (plist-get data :mode))
          (marker (plist-get data :marker))
          (symbol (plist-get data :symbol-name))
          (page (ghelp-get-page-or-create mode symbol)))
     (with-current-buffer page
-      (ghelp-page-clear)
-      (ghelp-page-insert-entry-list entry-list t)
-      (goto-char
-       (point-max))
-      (ghelp-previous-entry)
-      (ghelp-entry-unfold)
+      ;; Set data before calling the callback, not that it matters...
       (setq ghelp-page-data
             (ghelp--plist-set ghelp-page-data :symbol-name symbol))
       (setq ghelp-page-data
             (ghelp--plist-set ghelp-page-data :marker marker))
       (setq ghelp-page-data
-            (ghelp--plist-set ghelp-page-data :mode mode)))
+            (ghelp--plist-set ghelp-page-data :mode mode))
+      ;; If ENTRY-LIST is a callback, we pass the buffer to the
+      ;; backend and let it do the work, if not, we populate the
+      ;; buffer with ENTRY-LIST.
+      (ghelp-page-clear)
+      (if (functionp entry-list)
+          (progn (setq buffer-read-only nil)
+                 (funcall entry-list page
+                          ;; This callback sets up page buffer after
+                          ;; the backend has inserted the
+                          ;; documentation.
+                          (lambda ()
+                            (with-current-buffer page
+                              (setq buffer-read-only t)
+                              (goto-char (point-min))))))
+        (ghelp-page-insert-entry-list entry-list t)
+        (goto-char (point-max))
+        (ghelp-previous-entry)
+        (ghelp-entry-unfold)))
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
@@ -1173,6 +1212,7 @@ Return nil if no documentation is found."
 (declare-function ghelp-helpful-backend "ghelp-helpful.el")
 (declare-function ghelp-eglot-backend "ghelp-eglot.el")
 (declare-function ghelp-geiser-backend "ghelp-geiser.el")
+(declare-function ghelp-sly-backend "ghelp-sly.el")
 (defvar ghelp-eglot-supported-modes)
 
 (require 'ghelp-builtin)
@@ -1194,6 +1234,11 @@ Return nil if no documentation is found."
   (require 'ghelp-geiser)
   (ghelp-register-backend 'scheme-mode #'ghelp-geiser-backend)
   (ghelp-register-backend 'geiser-repl-mode #'ghelp-geiser-backend))
+
+(with-eval-after-load 'sly
+  (require 'ghelp-sly)
+  (ghelp-register-backend 'lisp-mode #'ghelp-sly-backend)
+  (ghelp-register-backend 'sly-mrepl-mode #'ghelp-sly-backend))
 
 
 (provide 'ghelp)
