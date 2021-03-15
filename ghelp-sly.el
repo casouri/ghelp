@@ -36,13 +36,12 @@
 (defun ghelp-sly--fontify-doc ()
   "Fontify the documentation in the current buffer."
   (goto-char (point-min))
-  ;; Add blank lines between entries and highlight entry titles.
+  ;; Highlight entry titles.
   (while (re-search-forward "^ +.*:[ \n]" nil t)
     (save-excursion
       (put-text-property (match-beginning 0) (match-end 0)
                          'face '(:weight bold))
-      (goto-char (match-beginning 0))
-      (insert "\n")))
+      (goto-char (match-beginning 0))))
   ;; Make the link to the source file a clickable button.
   (goto-char (point-min))
   (when (re-search-forward "Source file: \\(.*\\)$" nil t)
