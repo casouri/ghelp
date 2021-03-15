@@ -336,13 +336,18 @@
 
 ;;; Etc
 
-(defvar ghelp-mode-share-alist `((lisp-interaction-mode . emacs-lisp-mode)
-                                 ;; Without this setting ghelp can’t
-                                 ;; resolve the backend if you call
-                                 ;; helpful commands directly (instead
-                                 ;; of through ‘ghelp-describe’), e.g,
-                                 ;; ‘helpful-key’.
-                                 (helpful-mode . emacs-lisp-mode))
+(defgroup ghelp nil
+  "Gneric help."
+  :group 'help)
+
+(defcustom ghelp-mode-share-alist
+  `((lisp-interaction-mode . emacs-lisp-mode)
+    ;; Without this setting ghelp can’t
+    ;; resolve the backend if you call
+    ;; helpful commands directly (instead
+    ;; of through ‘ghelp-describe’), e.g,
+    ;; ‘helpful-key’.
+    (helpful-mode . emacs-lisp-mode))
   "An alist specifying how major modes shares documentations.
 
 An entry like (major-mode1 . major-mode2) makes MAJOR-MODE1
@@ -352,7 +357,8 @@ If there is another entry (major-mode2 . major-mode3), then
 both MAJOR-MODE1 and MAJOR-MODE2 shares with MAJOR-MODE3.
 
 The maximum levels you can connect these references depends
-on ‘ghelp--max-reference-count’.")
+on ‘ghelp--max-reference-count’."
+  :type '(alist :key-type symbol :value-type symbol))
 
 (defvar ghelp--max-reference-count 17
   "Maximum number of levels of reference allowed in ‘ghelp-mode-share-alist’.")
@@ -879,12 +885,14 @@ Each entry is a ‘ghelp-entry’.")
 
 ;;;;; Variables
 
-(defvar ghelp-enable-header-line t
+(defcustom ghelp-enable-header-line t
   "Whether to display information on the header line.
-Changeling this variable doesn’t affect existing ghelp pages.")
+Changeling this variable doesn’t affect existing ghelp pages."
+  :type 'boolean
+  :group 'ghelp)
 
 (defface ghelp-entry (let ((display t)
-                           (atts '(:inherit nil)))
+                           (atts '(:inherit default)))
                        `((,display . ,atts)))
   "Face for each entry in a documentation."
   :group 'ghelp)
