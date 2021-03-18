@@ -901,8 +901,8 @@ For FOLD, see ‘ghelp-page-insert-entry’."
 (defun ghelp--show-page (entry-list data &optional window)
   "Display page with ENTRY-LIST in WINDOW (if non-nil).
 DATA contains useful information like symbol and mode, see
-‘ghelp-page-data’ for more. ENTRY-LIST is either ((TITLE .
-BODY)...) or a buffer."
+‘ghelp-page-data’ for more. ENTRY-LIST is of the form
+\((TITLE . BODY) ...)."
   (let* ((mode (plist-get data :mode))
          (marker (plist-get data :marker))
          (symbol (plist-get data :symbol-name))
