@@ -29,7 +29,7 @@
 ;; f/b    Go forward/backward in history
 ;; TAB    Next button
 ;; S-TAB  Previous button
-;; t      Hide/show entry
+;; h      Hide/show entry
 ;; g      Refresh page
 ;; q      Close page
 ;; s      Search in history
@@ -657,7 +657,7 @@ Each entry is a ‘ghelp-entry’.")
 
 (defvar ghelp-page-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "t" #'ghelp-toggle-entry)
+    (define-key map "h" #'ghelp-toggle-entry)
     (define-key map (kbd "TAB") #'forward-button)
     (define-key map (kbd "C-TAB") #'backward-button)
     (define-key map (kbd "<backtab>") #'backward-button)

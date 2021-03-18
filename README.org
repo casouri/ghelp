@@ -56,7 +56,7 @@ Commands you can use:
 | =f/b=   | go forward/backward in history |
 | =TAB=   | next button                    |
 | =S-TAB= | previous button                |
-| =t=     | collapse/expand entry          |
+| =h=     | collapse/expand entry          |
 | =g=     | refresh page                   |
 | =q=     | close page                     |
 | =s=     | search/switch to a page        |
