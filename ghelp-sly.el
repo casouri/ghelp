@@ -22,15 +22,15 @@
            (connection (sly-current-connection))
            (symbol-name (plist-get data :symbol-name)))
        (ignore connection)
-       (lambda (buffer callback &rest _)
+       (lambda (display-fn &rest _)
          ;; ‘slynk:describe-symbol’ returns more information than
          ;; ‘slynk:documentation-symbol’.
          (sly-eval-async `(slynk:describe-symbol ,symbol-name)
            (lambda (doc)
-             (with-current-buffer buffer
+             (with-temp-buffer
                (insert doc)
                (ghelp-sly--fontify-doc)
-               (funcall callback)))
+               (funcall display-fn (buffer-string))))
            package))))))
 
 (defun ghelp-sly--fontify-doc ()

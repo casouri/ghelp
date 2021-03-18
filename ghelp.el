@@ -6,283 +6,77 @@
 
 ;;; Commentary:
 ;;
-;; This package provides a generic help system similar to Emacs Help.
-;; Unlike Emacs Help, ghelp works for more major-modes and is extensible
-;; with backends.
-;; 
-;; *Features*
-;; • Unified entry command
-;; • Unified UI
-;; • Documentation history, you can search in history, go back/forward.
-;; 
-;; *Currently supported backends*
-;; • builtin Help
-;; • [helpful]
-;; • [eglot]
-;; • [geiser]
-;; • [sly]
-;; 
-;; [☞ Screencasts]
-;; 
-;; 
-;; [helpful] <https://github.com/Wilfred/helpful>
-;; 
-;; [eglot] <https://github.com/joaotavora/eglot>
-;; 
-;; [geiser] <https://www.nongnu.org/geiser/>
-;; 
-;; [sly] <https://github.com/joaotavora/sly>
-;; 
-;; [☞ Screencasts] See section 8
-;; 
-;; 
-;; 1 Install & load
-;; ════════════════
-;; 
-;;   Download the files and add them to load path.
-;; 
-;;   With `use-package':
-;;   ┌────
-;;   │ (use-package ghelp)
-;;   └────
-;;   Without `use-package':
-;;   ┌────
-;;   │ (require 'ghelp)
-;;   └────
-;; 
-;; 
-;; 2 Usage
-;; ═══════
-;; 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    `ghelp-describe'           Describe a symbol in  current major mode  
-;;    `gehlp-describe-at-point'  Describe symbol at point (without prompt) 
-;;    `ghelp-resume'             Reopen last page                          
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    `ghelp-describe-elisp'     Describe a Emacs symbol (like apropos)         
-;;    `ghelp-describe-function'  Describe a Elisp function/macro/keyboard macro 
-;;    `ghelp-describe-variable'  Describe a Elisp variable                      
-;;    `ghelp-describe-key'       Describe a key sequence                        
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 
-;;   Normally `ghelp-describe' shows documentation of the symbol at point,
-;;   If you want to query for a symbol (e.g., with completion), type `C-u'
-;;   then `ghelp-describe'.
-;; 
-;; 
-;; 3 Enable backends
-;; ═════════════════
-;; 
-;;   Each backend are loaded automatically when you enabled the
-;;   corresponding package. For example, when you load `helpful.el', ghelp
-;;   automatically loads its helpful backend.
-;; 
-;; 
-;; 4 In ghelp buffer
-;; ═════════════════
-;; 
-;;   A ghelp buffer is called a page. Each page is made of several entries.
-;;   Each entry is a self-contained documentation. (For example, you could
-;;   have a entry for a symbol as a function and another one for it as a
-;;   variable.)
-;; 
-;;   Commands you can use:
-;; 
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;;    Key      Command                        
-;;   ─────────────────────────────────────────
-;;    `?'      show help                      
-;;    `f/b'    go forward/backward in history 
-;;    `TAB'    next button                    
-;;    `S-TAB'  previous button                
-;;    `t'      collapse/expand entry          
-;;    `g'      refresh page                   
-;;    `q'      close page                     
-;;    `s'      search/switch to a page        
-;;   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-;; 
-;;   For more bindings, type `?' in a ghelp buffer, or type `M-x
-;;   ghelp-describe ghelp-page-mode-map RET'.
-;; 
-;; 
-;; 5 Customization
-;; ═══════════════
-;; 
-;;   If you want several major modes to share the same set of history and
-;;   backends (like `lisp-interaction-mode' and `emacs-lisp-mode'), add an
-;;   entry `(mode1 . mode2)' to `ghelp-mode-share-alist', and `mode1' will
-;;   share everything of `mode2'.
-;; 
-;;   You can customize faces: `ghelp-entry', `ghelp-folded-entry', and
-;;   `ghelp-entry-title'.
-;; 
-;;   Normally if you call `ghelp-describe-function' it selects the backends
-;;   to use by the current major-mode. If you want to look up some symbol
-;;   with a specific backend, try `(ghelp-describe-with-mode ’prompt
-;;   'mode)'. For example, you can bind
-;;   ┌────
-;;   │ (define-key (kbd "C-h C-e") (lambda () (interactive) (ghelp-describe-with-mode ’force-prompt ’emacs-lisp-mode)))
-;;   └────
-;;   to look up Emacs Lisp symbols regardless of which major mode you are
-;;   currently in.
-;; 
-;; 
-;; 6 Write a backend
-;; ═════════════════
-;; 
-;;   A backend is a function that takes two arguments `COMMAND' and `DATA'.
-;; 
-;;   If `COMMAND' is `'symbol', return a string representing the symbol
-;;   that the user wants documentation for.
-;; 
-;;   If `COMMAND' is `'doc', return the documentation for `SYMBOL', where
-;;   `SYMBOL' is from `DATA':
-;;   ┌────
-;;   │ (:symbol-name SYMBOL :marker MARKER)
-;;   └────
-;;   And `MARKER' is the marker at the point where user invoked
-;;   `ghelp-describe'. Returned documentation should be a string ending
-;;   with a newline. Return nil if no documentation is found.
-;; 
-;;   Below is an example backend that gets the symbol and then the
-;;   documentation and returns them. It only recognizes “woome”, “veemo”,
-;;   “love” and “tank”.
-;;   ┌────
-;;   │ (defun ghelp-dummy-backend (command data)
-;;   │   (pcase command
-;;   │     ('symbol (completing-read "Symbol: "
-;;   │                               '("woome" "veemo" "love" "tank")))
-;;   │     ('doc (pcase (plist-get data :symbol-name)
-;;   │             ("woome" "Woome!!\n")
-;;   │             ("veemo" "Veemo!!\n")
-;;   │             ("love" "Peace!!\n")
-;;   │             ("tank" "TANK! THE! BEST!\n")))))
-;;   └────
-;;   You can try this out by typing `M-x ghelp-dummy RET'.
-;; 
-;;   Once you have a backend, register it by
-;;   ┌────
-;;   │ (ghelp-register-backend 'major-mode #'your-backend-function)
-;;   └────
-;; 
-;; 
-;; 7 Advanced backend
-;; ══════════════════
-;; 
-;; 7.1 Returned documentation
-;; ──────────────────────────
-;; 
-;;   Besides a string, the returned documentation could carry more
-;;   information.
-;; 
-;;   First, it can be a list of form `(TITLE BODY)' where `TITLE' is the
-;;   title for your documentation, and `BODY' is the body of your
-;;   documentation. This way you can use a title other than the symbol
-;;   name.
-;; 
-;;   Second, you can return multiple documentations by returning a list
-;;   `((TITLE BODY)...)', where each element is a `(TITLE BODY)' form.
-;; 
-;; 
-;; 7.2 Asynchronous backend
-;; ────────────────────────
-;; 
-;;   Ghelp also supports asynchronous backends. Instead of returning the
-;;   documentation immediately, a backend can return a callback function.
-;;   This function should have a signature like `(buffer callback &rest
-;;   _)'. `BUFFER' is the ghelp documentation buffer, the backend should
-;;   insert text into this buffer once it gets the documentation.
-;;   `CALLBACK' is a function provided by ghelp for finalizing the setup
-;;   for documentation buffer. It should be called /after/ the backend have
-;;   inserted all documentations into the buffer. `&rest _' allows ghelp
-;;   extend this interface in the future.
-;; 
-;;   Currently asynchronous documentation doesn’t get goodies like foldable
-;;   sections.
-;; 
-;; 
-;; 7.3 Use buttons in your documentation
-;; ─────────────────────────────────────
-;; 
-;;   You can use buttons in your documentation as long they are text
-;;   buttons made by text properties, rather than overlay buttons. After
-;;   all your are returning a string, which doesn’t carry overlays.
-;; 
-;;   However, one problem might arise if the command invoked by your button
-;;   needs some information, like the symbol that this documentation page
-;;   is describing. You can get that by `(ghelp-get-page-data)', which
-;;   returns a plist of form
-;;   ┌────
-;;   │ (:symbol-name SYMBOL :mode MODE :marker MARKER)
-;;   └────
-;;   `SYMBOL' and `MARKER' are the same as before, `MODE' is the major
-;;   mode.
-;; 
-;; 
-;; 7.4 Use a phony major mode
-;; ──────────────────────────
-;; 
-;;   Normally each backend is tied to an actual major mode. But if you want
-;;   to write a backend that doesn’t associate with any major mode, like a
-;;   dictionary, you can use `ghelp-describe-with-mode', and use
-;;   `dictionary' as your “major mode”.
-;; 
-;; 
-;; 8 Screencasts
-;; ═════════════
-;; 
-;;   *Eglot*
-;; 
-;;   <./ghelp-eglot-800.gif>
-;; 
-;;   *Helpful*
-;; 
-;;   <./ghelp-helpful-800.gif>
-;; 
-;;   *Sly*
-;; 
-;;   <./ghelp-sly.png>
+;; Ghelp provides a unified interface for documentations.
 ;;
-;; Commentary end
-
+;; Available commands:
+;;
+;; General:
+;;
+;; ghelp-describe           Describe a symbol in the current major mode
+;; gehlp-describe-at-point  Describe symbol at point (without prompt)
+;; ghelp-resume             Reopen last page
+;;
+;; Emacs help:
+;;
+;; ghelp-describe-elisp     Describe a Emacs symbol (like apropos)
+;; ghelp-describe-function  Describe a Elisp function/macro/kmacro
+;; ghelp-describe-variable  Describe a Elisp variable
+;; ghelp-describe-key       Describe a key sequence
+;;
+;; Commands in ghelp buffer:
+;;
+;; ?      Show help
+;; f/b    Go forward/backward in history
+;; TAB    Next button
+;; S-TAB  Previous button
+;; t      Hide/show entry
+;; g      Refresh page
+;; q      Close page
+;; s      Search in history
+;;
+;; Ghelp provides documentations through backends. Each backend is
+;; automatically loaded when the corresponding major mode loads.
+;; helpful.el is an exception: ghelp.el automatically loads
+;; helpful.el (rather than the other way around).
+;;
+;; If we want to major modes to use the same backend and history, add
+;; (MODE-1 . MODE-2) to ‘ghelp-mode-share-alist’. Then MODE-1 will
+;; share everything of MODE-2.
+;;
+;; If you want to write a backend, checkout “Write a backend” section
+;; in the README.
+;;
 ;;; Developer:
-
-;;;; Development plan:
-
-;; - Allow backends to use their own buffers. This also allows backends
-;;   to be async.
-
+;;
 ;;;; Terminology
-
-;; - ghelp   :: This package.
 ;;
-;; - page    :: The buffer displaying documentation.
+;; - ghelp   This package.
 ;;
-;; - backend :: The backend providing documentation. Each major mode
+;; - page    The buffer displaying documentation.
+;;
+;; - backend The backend providing documentation. Each major mode
 ;;              has one backend
 ;;
-;; - entry :: Page is made of entries. Each entry is a self-contained
-;;            documentation for the symbol. Each symbol can be
-;;            interpreted in different ways and we present each
-;;            interpretation’s documentation in a entry.
+;; - entry   A page is made of entries. Each entry is a self-contained
+;;           documentation for the symbol. Each symbol can be
+;;           interpreted in different ways and we present each
+;;           interpretation’s documentation in a entry.
 ;;
-;; - history :: Each major-mode has it’s own page history.
-
+;; - history Each major-mode has it’s own page history.
+;;
 ;;;; Page anatomy
-
+;;
 ;; A page is made of a series of entries. Each entry is made of a
 ;; title and a documentation body.
-
+;;
 ;;;; Backends
-
+;;
 ;; Each major mode has one backend that can be accessed through
 ;; ‘ghelp-describe’ function.  Multiple major modes could share
 ;; the same backend (and history).
-
+;;
 ;;;; History
-
+;;
 ;; Each major mode has a page history. Though multiple major mode
 ;; could share the same history. A history has a list of nodes. The list
 ;; is sorted from newest node to oldest node (so we can remove oldest
@@ -298,17 +92,16 @@
 ;;
 ;;    A - B - C - E - D
 ;;
-
+;;
 ;;;; Code structure
-
+;;
 ;; Ghelp contains self-contained sub-modules: ghelp-entry, ghelp-page,
-;; and ghelp-history. Other code don’t know the detail of them and
-;; only communicate with them by “exposed” functions. (At least that’s
-;; what I attempt to do.) You can find the “exposed” functions on the
+;; and ghelp-history. They don’t know the detail of each other and
+;; only communicates by “exposed” functions. (At least that’s what I
+;; attempt to do.) You can find the “exposed” functions on the
 ;; beginning of each section.
 
 ;;; Code:
-;;
 
 (require 'cl-lib)
 (require 'pcase)
@@ -488,17 +281,22 @@ If MARKER is nil, we use the marker at point."
         (user-error "No symbol at point"))
       (setq data (ghelp--plist-set data :symbol-name symbol)))
     ;; Request for documentation.
-    (let ((doc (funcall backend 'doc (copy-tree data))))
-      ;; DOC could be nil, string, (TITLE BODY), ((TITLE BODY)...) or
-      ;; a function.
+    (let ((doc (funcall backend 'doc (copy-tree data)))
+          ;; DOC could be nil, a string, (TITLE BODY), ((TITLE
+          ;; BODY)...) or a function.
+          (display-fn
+           (lambda (doc)
+             (let ((entry-list
+                    (cond ((stringp doc) `((,symbol ,doc)))
+                          ((and (consp doc) (stringp (car doc)))
+                           (list doc))
+                          (t doc))))
+               (ghelp--show-page entry-list data window)))))
       (when (not doc)
         (user-error "No documentation found for %s" symbol))
-      ;; Handle different kinds of doc.
-      (let ((entry-list (cond ((stringp doc) `((,symbol ,doc)))
-                              ((and (consp doc) (stringp (car doc)))
-                               (list doc))
-                              (t doc))))
-        (ghelp--show-page entry-list data window)))))
+      (if (functionp doc)
+          (funcall doc display-fn)
+        (funcall display-fn dc)))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
@@ -1117,24 +915,11 @@ BODY)...) or a buffer."
             (ghelp--plist-set ghelp-page-data :marker marker))
       (setq ghelp-page-data
             (ghelp--plist-set ghelp-page-data :mode mode))
-      ;; If ENTRY-LIST is a callback, we pass the buffer to the
-      ;; backend and let it do the work, if not, we populate the
-      ;; buffer with ENTRY-LIST.
       (ghelp-page-clear)
-      (if (functionp entry-list)
-          (progn (setq buffer-read-only nil)
-                 (funcall entry-list page
-                          ;; This callback sets up page buffer after
-                          ;; the backend has inserted the
-                          ;; documentation.
-                          (lambda ()
-                            (with-current-buffer page
-                              (setq buffer-read-only t)
-                              (goto-char (point-min))))))
-        (ghelp-page-insert-entry-list entry-list t)
-        (goto-char (point-max))
-        (ghelp-previous-entry)
-        (ghelp-entry-unfold)))
+      (ghelp-page-insert-entry-list entry-list t)
+      (goto-char (point-max))
+      (ghelp-previous-entry)
+      (ghelp-entry-unfold))
     (if window
         (window--display-buffer page window 'window)
       (setq window (display-buffer page)))
@@ -1205,7 +990,9 @@ Return nil if no documentation is found."
             ("woome" "Woome!!\n")
             ("veemo" "Veemo!!\n")
             ("love" "Peace!!\n")
-            ("tank" "TANK! THE! BEST!\n")))))
+            ("tank" "TANK! THE! BEST!\n")
+            ("async" (lambda (display-fn)
+                       (funcall display-fn "Promise!")))))))
 
 (defun ghelp-dummy ()
   "Demonstrate the dummy backend."
