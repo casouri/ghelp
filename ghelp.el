@@ -296,7 +296,7 @@ If MARKER is nil, we use the marker at point."
         (user-error "No documentation found for %s" symbol))
       (if (functionp doc)
           (funcall doc display-fn)
-        (funcall display-fn dc)))))
+        (funcall display-fn doc)))))
 
 (defun ghelp-describe-at-point ()
   "Describe symbol at point."
