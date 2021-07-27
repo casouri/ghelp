@@ -154,10 +154,12 @@ on ‘ghelp--max-reference-count’."
   :type '(alist :key-type symbol :value-type symbol))
 
 (defvar ghelp--max-reference-count 17
-  "Maximum number of levels of reference allowed in ‘ghelp-mode-share-alist’.")
+  "Maximum number of levels of reference allowed...
+...in ‘ghelp-mode-share-alist’.")
 
 (defun ghelp--resolve-mode (mode)
-  "Return the major mode that MODE points to in ‘ghelp-mode-share-alist’.
+  "Return the major mode that MODE points to...
+...in ‘ghelp-mode-share-alist’.
 If MODE doesn’t point to anything, return itself."
   (let (prev-mode)
     ;; if MODE doesn’t point to anything anymore (MODE = nil),
