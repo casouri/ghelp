@@ -14,7 +14,7 @@ This package provides a generic help system similar to Emacs Help. Unlike Emacs 
 - [[https://www.nongnu.org/geiser/][geiser]]
 - [[https://github.com/joaotavora/sly][sly]]
 
-[[Screencasts][☞ Screencasts]]
+[[https://github.com/casouri/ghelp#screencasts][☞ Screencasts]]
 
 * Install & load
 Download the files and add them to load path.
