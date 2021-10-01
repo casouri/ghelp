@@ -306,19 +306,44 @@ If MARKER is nil, we use the marker at point."
   (ghelp--maybe-update-current-page)
   (ghelp-describe 'no-prompt))
 
-(defun ghelp-describe-function ()
-  "Describe a function/macro/keyboard macro."
-  (interactive)
+(defun ghelp-describe-function (function)
+  "Describe a function/macro/keyboard macro.
+FUNCTION is the same as in ‘describe-function’."
+  (interactive (help-fns--describe-function-or-command-prompt))
   (ghelp--maybe-update-current-page)
   (ghelp-describe-1
-   'force-prompt '(:mode emacs-lisp-mode :category function)))
+   'no-prompt
+   `(:symbol-name ,(symbol-name function)
+                  :mode emacs-lisp-mode :category function)))
 
-(defun ghelp-describe-variable ()
-  "Describe a variable."
-  (interactive)
+(defun ghelp-describe-variable (variable &optional buffer frame)
+  "Describe a variable.
+VARIABLE, BUFFER and FRAME are the same as in ‘describe-variable’."
+  ;; Copied straight from ‘describe-variable’.
+  (interactive
+   (let ((v (variable-at-point))
+	     (enable-recursive-minibuffers t)
+         (orig-buffer (current-buffer))
+	     val)
+     (setq val (completing-read
+                (format-prompt "Describe variable" (and (symbolp v) v))
+                #'help--symbol-completion-table
+                (lambda (vv)
+                  (or (get vv 'variable-documentation)
+                      (and (not (keywordp vv))
+                           ;; Since the variable may only exist in the
+                           ;; original buffer, we have to look for it
+                           ;; there.
+                           (buffer-local-boundp vv orig-buffer))))
+                t nil nil
+                (if (symbolp v) (symbol-name v))))
+     (list (if (equal val "") v (intern val)))))
   (ghelp--maybe-update-current-page)
-  (ghelp-describe-1
-   'force-prompt '(:mode emacs-lisp-mode :category variable)))
+  (with-current-buffer (or buffer (current-buffer))
+    (ghelp-describe-1
+     'no-prompt `(:symbol-name
+                  ,(symbol-name variable)
+                  :mode emacs-lisp-mode :category variable))))
 
 (defun ghelp-describe-key (key-sequence)
   "Describe KEY-SEQUENCE."
