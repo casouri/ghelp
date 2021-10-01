@@ -309,7 +309,25 @@ If MARKER is nil, we use the marker at point."
 (defun ghelp-describe-function (function)
   "Describe a function/macro/keyboard macro.
 FUNCTION is the same as in ‘describe-function’."
-  (interactive (help-fns--describe-function-or-command-prompt))
+  ;; Copied from ‘describe-function’.
+  (interactive
+   (let* ((fn (function-called-at-point))
+          (enable-recursive-minibuffers t)
+          (val (completing-read
+                (if fn
+                    (format "Describe function (default %s): " fn)
+                  "Describe function: ")
+                #'help--symbol-completion-table
+                (lambda (f) (or (fboundp f) (get f 'function-documentation)))
+                t nil nil
+                (and fn (symbol-name fn)))))
+     (unless (equal val "")
+       (setq fn (intern val)))
+     (unless (and fn (symbolp fn))
+       (user-error "You didn't specify a function symbol"))
+     (unless (or (fboundp fn) (get fn 'function-documentation))
+       (user-error "Symbol's function definition is void: %s" fn))
+     (list fn)))
   (ghelp--maybe-update-current-page)
   (ghelp-describe-1
    'no-prompt
@@ -326,18 +344,22 @@ VARIABLE, BUFFER and FRAME are the same as in ‘describe-variable’."
          (orig-buffer (current-buffer))
 	     val)
      (setq val (completing-read
-                (format-prompt "Describe variable" (and (symbolp v) v))
+                (if (symbolp v)
+                    (format
+                     "Describe variable (default %s): " v)
+                  "Describe variable: ")
                 #'help--symbol-completion-table
                 (lambda (vv)
-                  (or (get vv 'variable-documentation)
-                      (and (not (keywordp vv))
-                           ;; Since the variable may only exist in the
-                           ;; original buffer, we have to look for it
-                           ;; there.
-                           (buffer-local-boundp vv orig-buffer))))
+                  ;; In case the variable only exists in the buffer
+                  ;; the command we switch back to that buffer before
+                  ;; we examine the variable.
+                  (with-current-buffer orig-buffer
+                    (or (get vv 'variable-documentation)
+                        (and (boundp vv) (not (keywordp vv))))))
                 t nil nil
                 (if (symbolp v) (symbol-name v))))
-     (list (if (equal val "") v (intern val)))))
+     (list (if (equal val "")
+	           v (intern val)))))
   (ghelp--maybe-update-current-page)
   (with-current-buffer (or buffer (current-buffer))
     (ghelp-describe-1
