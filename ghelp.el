@@ -306,66 +306,29 @@ If MARKER is nil, we use the marker at point."
   (ghelp--maybe-update-current-page)
   (ghelp-describe 'no-prompt))
 
-(defun ghelp-describe-function (function)
+(defun ghelp-describe-function (&optional function)
   "Describe a function/macro/keyboard macro.
 FUNCTION is the same as in ‘describe-function’."
   ;; Copied from ‘describe-function’.
-  (interactive
-   (let* ((fn (function-called-at-point))
-          (enable-recursive-minibuffers t)
-          (val (completing-read
-                (if fn
-                    (format "Describe function (default %s): " fn)
-                  "Describe function: ")
-                #'help--symbol-completion-table
-                (lambda (f) (or (fboundp f) (get f 'function-documentation)))
-                t nil nil
-                (and fn (symbol-name fn)))))
-     (unless (equal val "")
-       (setq fn (intern val)))
-     (unless (and fn (symbolp fn))
-       (user-error "You didn't specify a function symbol"))
-     (unless (or (fboundp fn) (get fn 'function-documentation))
-       (user-error "Symbol's function definition is void: %s" fn))
-     (list fn)))
+  (interactive)
   (ghelp--maybe-update-current-page)
   (ghelp-describe-1
-   'no-prompt
-   `(:symbol-name ,(symbol-name function)
-                  :mode emacs-lisp-mode :category function)))
+   (if function 'no-prompt 'force-prompt)
+   (append (if function (list :symbol-name (symbol-name function)))
+           '(:mode emacs-lisp-mode :category function))))
 
-(defun ghelp-describe-variable (variable &optional buffer frame)
+(defun ghelp-describe-variable (&optional variable buffer frame)
   "Describe a variable.
 VARIABLE, BUFFER and FRAME are the same as in ‘describe-variable’."
   ;; Copied straight from ‘describe-variable’.
-  (interactive
-   (let ((v (variable-at-point))
-	     (enable-recursive-minibuffers t)
-         (orig-buffer (current-buffer))
-	     val)
-     (setq val (completing-read
-                (if (symbolp v)
-                    (format
-                     "Describe variable (default %s): " v)
-                  "Describe variable: ")
-                #'help--symbol-completion-table
-                (lambda (vv)
-                  ;; In case the variable only exists in the buffer
-                  ;; the command we switch back to that buffer before
-                  ;; we examine the variable.
-                  (with-current-buffer orig-buffer
-                    (or (get vv 'variable-documentation)
-                        (and (boundp vv) (not (keywordp vv))))))
-                t nil nil
-                (if (symbolp v) (symbol-name v))))
-     (list (if (equal val "")
-	           v (intern val)))))
+  (interactive)
+  (ignore frame)
   (ghelp--maybe-update-current-page)
   (with-current-buffer (or buffer (current-buffer))
     (ghelp-describe-1
-     'no-prompt `(:symbol-name
-                  ,(symbol-name variable)
-                  :mode emacs-lisp-mode :category variable))))
+     (if variable 'no-prompt 'force-prompt)
+     (append (if variable (list :symbol-name (symbol-name variable)))
+             '(:mode emacs-lisp-mode :category variable)))))
 
 (defun ghelp-describe-key (key-sequence)
   "Describe KEY-SEQUENCE."
