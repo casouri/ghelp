@@ -703,7 +703,7 @@ Changeling this variable doesn’t affect existing ghelp pages."
   :group 'ghelp)
 
 (defface ghelp-entry (let ((display t)
-                           (atts '(:inherit default)))
+                           (atts nil))
                        `((,display . ,atts)))
   "Face for each entry in a documentation."
   :group 'ghelp)
