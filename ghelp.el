@@ -1026,7 +1026,9 @@ Return nil if no documentation is found."
 (require 'ghelp-builtin)
 (ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
 
-(when (find-library-name "helpful")
+(when (condition-case nil
+          (find-library-name "helpful")
+        (error nil))
   (require 'helpful))
 
 (with-eval-after-load 'helpful
