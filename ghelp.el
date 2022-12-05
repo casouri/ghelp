@@ -669,20 +669,17 @@ Each entry is a ‘ghelp-entry’.")
 
 (defvar ghelp-page-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map "h" #'ghelp-toggle-entry)
-    (define-key map "t" #'ghelp-toggle-entry)
+    (define-key map (kbd "RET") #'ghelp-toggle-entry)
     (define-key map (kbd "TAB") #'forward-button)
     (define-key map (kbd "C-TAB") #'backward-button)
     (define-key map (kbd "<backtab>") #'backward-button)
     (define-key map "q" #'ghelp-quit)
     (define-key map "b" #'ghelp-back)
     (define-key map "f" #'ghelp-forward)
-    (define-key map "d" #'ghelp-next-entry)
-    (define-key map "u" #'ghelp-previous-entry)
+    (define-key map "]" #'ghelp-next-entry)
+    (define-key map "[" #'ghelp-previous-entry)
     (define-key map "n" #'next-line)
     (define-key map "p" #'previous-line)
-    (define-key map "m" #'forward-button)
-    (define-key map "[" #'backward-button)
     (define-key map (kbd "SPC") #'scroll-up-command)
     (define-key map (kbd "<backspace>") #'scroll-down-command)
     (define-key map "g" #'ghelp-refresh)
@@ -808,15 +805,14 @@ The plist contains useful information like symbol and marker."
 (defun ghelp-page-show-help ()
   "Show help for available commands in `ghelp-page-mode'."
   (interactive)
-  (message "q       quit            t       toggle entry
+  (message "q       quit            RET     hide/show entry
 g       refresh         s       switch to page
 
 TAB     next button     S-TAB   previous button
-f       next page       b       previous page
-d       next entry      u       previous entry
-
-m       next button     [       previous button
 SPC     scroll down     DEL     scroll up
+
+f       next page       b       previous page
+]       next entry      [       previous entry
 "))
 
 ;;;;; Functions
