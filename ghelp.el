@@ -1,7 +1,7 @@
 ;;; ghelp.el --- Generic help      -*- lexical-binding: t; -*-
 
 ;; Author: Yuan Fu <casouri@gmail.com>
-;; Version: 0.9.0
+;; Version: 0.10.0
 
 ;;; This file is NOT part of GNU Emacs
 
