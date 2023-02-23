@@ -961,17 +961,37 @@ them to current in their history."
 
 (defun ghelp--get-backend (mode)
   "Get ghelp backend by MODE."
-  (alist-get mode ghelp-backend-alist))
+  (or (alist-get mode ghelp-backend-alist)
+      (catch 'found
+        (dolist (backend ghelp-backend-alist)
+          (when (and (eq t (car backend))
+                     (funcall (cdr backend) 'available-p nil))
+            (throw 'found (cdr backend)))))))
 
 (defun ghelp-register-backend (mode backend-function)
   "Register BACKEND-FUNCTION for each MODE.
-MODE can be a major mode symbol or a list of it."
-  (cond ((symbolp mode)
+MODE can be a major mode symbol or a list of it. If MODE is t,
+the backend should support the ‘available-p’ command and is used
+as a fallback backend. Ie, it is called if no explicit backends
+is available."
+  (cond ((eq mode t)
+         (let ((entry (cons mode backend-function)))
+           (unless (member entry ghelp-backend-alist)
+             (push entry ghelp-backend-alist))))
+        ((symbolp mode)
          (setf (alist-get mode ghelp-backend-alist) backend-function))
         ((consp mode)
          (dolist (mode1 mode)
            (setf (alist-get mode1 ghelp-backend-alist) backend-function)))
         (t (error "MODE should be either a list or a symbol"))))
+
+(defun ghelp-deregister-backend (mode backend-function)
+  "Deregister BACKEND-FUNCTION for MODE."
+  (let ((new-list nil))
+    (dolist (entry ghelp-backend-alist)
+      (unless (equal (cons mode backend-function) entry)
+        (push entry new-list)))
+    (setq ghelp-backend-alist (nconc new-list))))
 
 ;;; Dummy
 
@@ -1018,7 +1038,6 @@ Return nil if no documentation is found."
 (declare-function ghelp-eglot-backend "ghelp-eglot.el")
 (declare-function ghelp-geiser-backend "ghelp-geiser.el")
 (declare-function ghelp-sly-backend "ghelp-sly.el")
-(defvar ghelp-eglot-supported-modes)
 
 (require 'ghelp-builtin)
 (ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
@@ -1034,8 +1053,7 @@ Return nil if no documentation is found."
 
 (with-eval-after-load 'eglot
   (require 'ghelp-eglot)
-  (ghelp-register-backend ghelp-eglot-supported-modes
-                          #'ghelp-eglot-backend))
+  (ghelp-register-backend t #'ghelp-eglot-backend))
 
 (with-eval-after-load 'geiser
   (require 'ghelp-geiser)

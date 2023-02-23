@@ -77,9 +77,9 @@ to look up Emacs Lisp symbols regardless of which major mode you are currently i
 * Write a backend
 A backend is a function that takes two arguments ~COMMAND~ and ~DATA~.
 
-If ~COMMAND~ is ~'symbol~, return a string representing the symbol that the user wants documentation for.
+If ~COMMAND~ is ~symbol~, return a string representing the symbol that the user wants documentation for.
 
-If ~COMMAND~ is ~'doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is from ~DATA~:
+If ~COMMAND~ is ~doc~, return the documentation for ~SYMBOL~, where ~SYMBOL~ is from ~DATA~:
 #+BEGIN_SRC emacs-lisp
 (:symbol-name SYMBOL :marker MARKER)
 #+END_SRC
@@ -137,6 +137,15 @@ However, one problem might arise if the command invoked by your button needs som
 ** Use a phony major mode
 Normally each backend is tied to an actual major mode. But if you want to write a backend that doesn’t associate with any major mode, like a dictionary, you can use ~ghelp-describe-with-mode~, and use ~dictionary~ as your “major mode”.
 
+** Backend that can support undetermined major modes
+
+Backends like eglot can support a wide range of major modes that can’t be determined ahead of time. For this kinds of backends, use ~t~ for the ~MODE~ argument when registering them:
+
+#+begin_src emacs-lisp
+(ghelp-register-backend t #'your-backend-function)
+#+end_src
+
+Your backend function should support the ~available-p~ command, in addition to the ~symbol~ and ~doc~ command. It should return t/nil indication the backend’s availability in the current buffer.
 
 * Screencasts
 *Eglot*
