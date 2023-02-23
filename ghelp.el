@@ -1038,6 +1038,7 @@ Return nil if no documentation is found."
 (declare-function ghelp-eglot-backend "ghelp-eglot.el")
 (declare-function ghelp-geiser-backend "ghelp-geiser.el")
 (declare-function ghelp-sly-backend "ghelp-sly.el")
+(declare-function ghelp-lspce-backend "ghelp-lspce.el")
 
 (require 'ghelp-builtin)
 (ghelp-register-backend 'emacs-lisp-mode #'ghelp-help-backend)
@@ -1054,6 +1055,10 @@ Return nil if no documentation is found."
 (with-eval-after-load 'eglot
   (require 'ghelp-eglot)
   (ghelp-register-backend t #'ghelp-eglot-backend))
+
+(with-eval-after-load 'lspce
+  (require 'ghelp-lspce)
+  (ghelp-register-backend t #'ghelp-lspce-backend))
 
 (with-eval-after-load 'geiser
   (require 'ghelp-geiser)
